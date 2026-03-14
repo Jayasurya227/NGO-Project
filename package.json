@@ -1,24 +1,16 @@
 {
   "name": "ngo-impact-platform",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "turbo run build",
     "dev": "turbo run dev",
-    "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint"
   },
   "devDependencies": {
-    "prettier": "^3.7.4",
-    "turbo": "^2.8.17",
-    "typescript": "5.9.2"
-  },
-  "engines": {
-    "node": ">=18"
-  },
-  "packageManager": "npm@10.9.4",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ]
+    "turbo": "latest",
+    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0"
+  }
 }

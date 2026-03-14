@@ -1,0 +1,12 @@
+{
+  "name": "@ngo/mcp-servers",
+  "version": "1.0.0",
+  "scripts": { "build": "tsc" },
+  "dependencies": {
+    "@ngo/database": "workspace:*",
+    "@ngo/audit": "workspace:*",
+    "@modelcontextprotocol/sdk": "latest",
+    "openai": "^4.28.0",
+    "zod": "^3.22.0"
+  }
+}

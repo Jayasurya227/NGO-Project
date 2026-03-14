@@ -1,0 +1,8 @@
+{
+  "name": "@ngo/database",
+  "version": "1.0.0",
+  "main": "./src/client.ts",
+  "scripts": { "build": "tsc" },
+  "dependencies": { "@prisma/client": "^5.10.0" },
+  "devDependencies": { "prisma": "^5.10.0" }
+}
