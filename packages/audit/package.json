@@ -2,6 +2,12 @@
   "name": "@ngo/audit",
   "version": "1.0.0",
   "main": "./src/index.ts",
-  "scripts": { "build": "tsc", "test": "vitest" },
-  "dependencies": { "@ngo/database": "workspace:*" }
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@ngo/database": "workspace:*",
+    "dotenv": "^16.6.1"
+  }
 }
