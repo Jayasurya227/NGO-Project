@@ -1,0 +1,255 @@
+﻿// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  subdomain String   @unique
+  createdAt DateTime @default(now())
+
+  users                 User[]
+  donors                Donor[]
+  initiatives           Initiative[]
+  beneficiaries         Beneficiary[]
+  sponsorRequirements   SponsorRequirement[]
+  milestones            Milestone[]
+  contracts             Contract[]
+  donations             Donation[]
+  allocations           Allocation[]
+  evidence              Evidence[]
+  outcomes              Outcome[]
+  stories               Story[]
+  communicationLogs     CommunicationLog[]
+  auditEvents           AuditEvent[]
+  agentJobLogs          AgentJobLog[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String
+  passwordHash String
+  role         String   @default("FIELD_WORKER")
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now())
+
+  @@unique([email, tenantId])
+  @@map("users")
+}
+
+model Donor {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  donations Donation[]
+
+  @@map("donors")
+}
+
+model Initiative {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+
+  beneficiaries Beneficiary[]
+  milestones    Milestone[]
+
+  @@map("initiatives")
+}
+
+model SponsorRequirement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("sponsor_requirements")
+}
+
+model Beneficiary {
+  id           String   @id @default(cuid())
+  name         String
+  initiativeId String
+  initiative   Initiative @relation(fields: [initiativeId], references: [id])
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now())
+
+  outcomes Outcome[]
+
+  @@map("beneficiaries")
+}
+
+model Milestone {
+  id           String   @id @default(cuid())
+  title        String
+  description  String
+  status       String   @default("PENDING")
+  initiativeId String
+  initiative   Initiative @relation(fields: [initiativeId], references: [id])
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now())
+
+  contracts Contract[]
+
+  @@map("milestones")
+}
+
+model Contract {
+  id          String   @id @default(cuid())
+  title       String
+  amount      Float
+  milestoneId String
+  milestone   Milestone @relation(fields: [milestoneId], references: [id])
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime @default(now())
+
+  allocations Allocation[]
+
+  @@map("contracts")
+}
+
+model Donation {
+  id        String   @id @default(cuid())
+  amount    Float
+  donorId   String
+  donor     Donor    @relation(fields: [donorId], references: [id])
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("donations")
+}
+
+model Allocation {
+  id         String   @id @default(cuid())
+  amount     Float
+  contractId String
+  contract   Contract @relation(fields: [contractId], references: [id])
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@map("allocations")
+}
+
+model Evidence {
+  id        String   @id @default(cuid())
+  title     String
+  url       String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  verificationResults VerificationResult[]
+
+  @@map("evidence")
+}
+
+model VerificationResult {
+  id        String   @id @default(cuid())
+  status    String   @default("PENDING")
+  evidenceId String
+  evidence  Evidence @relation(fields: [evidenceId], references: [id])
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("verification_results")
+}
+
+model Outcome {
+  id            String   @id @default(cuid())
+  description   String
+  beneficiaryId String
+  beneficiary   Beneficiary @relation(fields: [beneficiaryId], references: [id])
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt     DateTime @default(now())
+
+  @@map("outcomes")
+}
+
+model Story {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("stories")
+}
+
+model MatchResult {
+  id        String   @id @default(cuid())
+  score     Float
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("match_results")
+}
+
+model ContentArtifact {
+  id        String   @id @default(cuid())
+  title     String
+  url       String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("content_artifacts")
+}
+
+model CommunicationLog {
+  id        String   @id @default(cuid())
+  message   String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("communication_logs")
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  action    String
+  details   String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("audit_events")
+}
+
+model AgentJobLog {
+  id        String   @id @default(cuid())
+  jobId     String
+  status    String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@map("agent_job_logs")
+}

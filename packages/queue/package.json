@@ -1,0 +1,5 @@
+﻿{
+  "name": "@ngo/queue",
+  "version": "1.0.0",
+  "main": "src/queues.ts"
+}
