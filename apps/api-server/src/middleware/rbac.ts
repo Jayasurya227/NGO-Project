@@ -1,18 +1,19 @@
-﻿import { FastifyRequest, FastifyReply } from 'fastify';
-import { err } from '../utils/response';
+﻿import { FastifyRequest, FastifyReply } from 'fastify'
+import jwt from 'jsonwebtoken'
 
-const PERMISSIONS = {
-  'GET:/api/requirements': ['ADMIN', 'DRM'],
-  'POST:/api/requirements': ['ADMIN', 'DRM'],
-  'GET:/api/donors': ['ADMIN'],
-  'POST:/api/donors': ['ADMIN'],
-};
+export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
+  const authHeader = req.headers.authorization
 
-export async function rbacMiddleware(request: FastifyRequest, reply: FastifyReply) {
-  const routeKey = ${'$'}{request.method}:{request.url.split('?')[0]};
-  const user = request.user;
-  
-  if (!user) {
-    return reply.status(401).send(err('UNAUTHORIZED', 'Missing authentication'));
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return reply.status(401).send({ success: false, error: 'No token provided' })
+  }
+
+  const token = authHeader.split(' ')[1]
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret123') as any
+    ;(req as any).user = decoded
+  } catch {
+    return reply.status(401).send({ success: false, error: 'Invalid or expired token' })
   }
 }
