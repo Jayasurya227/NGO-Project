@@ -2,6 +2,10 @@
   "name": "@ngo/agents",
   "version": "1.0.0",
   "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./utils/embeddings": "./src/utils/embeddings.ts"
+  },
   "scripts": { "build": "tsc", "test": "vitest" },
   "dependencies": {
     "@ngo/database": "workspace:*",

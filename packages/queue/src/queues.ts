@@ -1,3 +1,11 @@
+// Load env from root
+if (!process.env.REDIS_URL) {
+  const { config } = require("dotenv");
+  const { join } = require("path");
+  config({ path: join(process.cwd(), ".env") });
+  config({ path: join(process.cwd(), "../../.env") });
+}
+import "dotenv/config";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
 
