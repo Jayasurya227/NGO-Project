@@ -1,12 +1,13 @@
-﻿{
+{
   "name": "@ngo/database",
   "version": "1.0.0",
   "main": "src/client.ts",
-  "devDependencies": {
-    "@prisma/cli": "^5.7.0",
-    "typescript": "^5.3.0"
+  "scripts": {
+    "db:seed": "ts-node prisma/seed.ts",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate"
   },
-  "dependencies": {
-    "@prisma/client": "^5.7.0"
+  "devDependencies": {
+    "typescript": "^5.3.0"
   }
 }

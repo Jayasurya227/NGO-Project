@@ -1,11 +1,27 @@
-﻿{
+{
   "name": "ngo-impact-platform",
   "version": "1.0.0",
   "private": true,
-  "scripts": {
-    "dev": "pnpm -r --parallel dev",
-    "build": "pnpm -r --parallel build",
-    "test": "pnpm -r --parallel test",
-    "lint": "pnpm -r --parallel lint"
+  "dependencies": {
+    "@fastify/cors": "^11.2.0",
+    "@fastify/multipart": "^9.4.0",
+    "@fastify/websocket": "^11.2.0",
+    "@prisma/client": "^5.22.0",
+    "@types/node": "^25.5.0",
+    "bcrypt": "^6.0.0",
+    "bull": "^4.16.5",
+    "fastify": "^5.8.2",
+    "ioredis": "^5.10.0",
+    "jsonwebtoken": "^9.0.3",
+    "redis": "^5.11.0",
+    "typescript": "^5.9.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/bull": "^4.10.4",
+    "@types/ioredis": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "prisma": "^5.22.0"
   }
 }
