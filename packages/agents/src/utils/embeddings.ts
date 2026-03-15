@@ -51,9 +51,8 @@ export async function embedAndSaveInitiative(initiativeId: string): Promise<void
 
   const vector = await embedText(text);
 
-  await prisma.$executeRaw`
-    UPDATE "Initiative"
-    SET "embeddingVector" = ${`[${vector.join(",")}]`}::vector
-    WHERE id = ${initiativeId}
-  `;
+ const vectorString = `[${vector.join(",")}]`;
+await prisma.$executeRawUnsafe(
+  `UPDATE "Initiative" SET "embeddingVector" = '${vectorString}'::vector WHERE id = '${initiativeId}'`
+);
 }

@@ -1,4 +1,5 @@
 // Load env from root
+import "./load-env";
 if (!process.env.REDIS_URL) {
   const { config } = require("dotenv");
   const { join } = require("path");

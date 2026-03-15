@@ -1,7 +1,4 @@
-// Load env FIRST before any other imports
-import { config } from "dotenv";
-import { resolve } from "path";
-config({ path: resolve(process.cwd(), ".env") });
+import "../load-env";
 
 import { Job } from "bullmq";
 import { BaseAgentWorker } from "../base-worker";

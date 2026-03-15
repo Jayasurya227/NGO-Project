@@ -1,3 +1,4 @@
+import "./load-env";
 import { config } from "dotenv";
 import { resolve } from "path";
 config({ path: resolve(process.cwd(), ".env") });
@@ -56,7 +57,7 @@ export abstract class BaseAgentWorker<T extends { tenantId: string }> {
     );
 
     worker.on("error", (err) => console.error(`[${this.agentName}] Worker error:`, err));
-    worker.on("failed", (job, err) => console.error(`[${this.agentName}] Job failed:`, job?.id, err.message));
+    worker.on("failed", (job, err) => console.error(`[${this.agentName}] Job failed:`, job?.id, err.message, err.stack));
     worker.on("completed", (job) => console.log(`[${this.agentName}] Job completed:`, job.id));
 
     console.log(`Worker started: ${this.agentName} (queue: ${this.queueName})`);
