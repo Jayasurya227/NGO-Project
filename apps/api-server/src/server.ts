@@ -1,4 +1,4 @@
-﻿import Fastify from 'fastify'
+import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import { authRoutes } from './routes/auth'
 import { requirementsRoutes } from './routes/requirements'
@@ -7,12 +7,15 @@ import { donationsRoutes } from './routes/donations'
 import { uploadRoutes } from './routes/upload'
 import { websocketPlugin } from './ws/plugin'
 import { initiativesRoutes } from './routes/initiatives'
+import { agentRoutes } from './routes/agents'
+import { storyRoutes } from './routes/stories'
+import { contentRoutes } from './routes/content'
 
 async function start() {
   const app = Fastify({ logger: true })
 
   await app.register(cors, {
-    origin: 'http://localhost:3000',
+    origin: ['http://localhost:3000', 'http://localhost:3001'],
     credentials: true,
   })
 
@@ -33,6 +36,9 @@ async function start() {
   await donationsRoutes(app)
   await uploadRoutes(app)
   await initiativesRoutes(app)
+  await agentRoutes(app)
+  await app.register(storyRoutes, { prefix: '/api/stories' })
+  await app.register(contentRoutes, { prefix: '/api/content' })
 
   const port = parseInt(process.env.API_PORT ?? '4000')
   await app.listen({ port, host: '0.0.0.0' })

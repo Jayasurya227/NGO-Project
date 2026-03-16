@@ -76,24 +76,32 @@ model Initiative {
 }
 
 model SponsorRequirement {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  createdAt DateTime @default(now())
+  id               String   @id @default(cuid())
+  title            String
+  content          String
+  status           String   @default("PENDING_EXTRACTION")
+  rawDocumentUrl   String?
+  extractedFields  Json?
+  confidenceScores Json?
+  gapReportJson    Json?
+  version          Int      @default(1)
+  donorId          String?
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@map("sponsor_requirements")
 }
 
 model Beneficiary {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   name         String
   initiativeId String
   initiative   Initiative @relation(fields: [initiativeId], references: [id])
   tenantId     String
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  createdAt    DateTime @default(now())
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime   @default(now())
 
   outcomes Outcome[]
 
@@ -101,15 +109,15 @@ model Beneficiary {
 }
 
 model Milestone {
-  id           String   @id @default(cuid())
+  id           String     @id @default(cuid())
   title        String
   description  String
-  status       String   @default("PENDING")
+  status       String     @default("PENDING")
   initiativeId String
   initiative   Initiative @relation(fields: [initiativeId], references: [id])
   tenantId     String
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  createdAt    DateTime @default(now())
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime   @default(now())
 
   contracts Contract[]
 
@@ -117,14 +125,14 @@ model Milestone {
 }
 
 model Contract {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
   amount      Float
   milestoneId String
   milestone   Milestone @relation(fields: [milestoneId], references: [id])
   tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  createdAt   DateTime @default(now())
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  createdAt   DateTime  @default(now())
 
   allocations Allocation[]
 
@@ -204,11 +212,15 @@ model Story {
 }
 
 model MatchResult {
-  id        String   @id @default(cuid())
-  score     Float
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  score        Float
+  rank         Int      @default(0)
+  overallScore Float    @default(0)
+  explanation  String?
+  subScores    Json?
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now())
 
   @@map("match_results")
 }
@@ -246,12 +258,19 @@ model AuditEvent {
 }
 
 model AgentJobLog {
-  id        String   @id @default(cuid())
-  jobId     String
-  status    String
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  createdAt DateTime @default(now())
+  id           String   @id @default(cuid())
+  jobId        String
+  status       String
+  agentName    String?
+  modelVersion String?
+  promptHash   String?
+  latencyMs    Int?
+  tokensUsed   Int?
+  error        String?
+  triggeredBy  String?
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime @default(now())
 
   @@map("agent_job_logs")
 }

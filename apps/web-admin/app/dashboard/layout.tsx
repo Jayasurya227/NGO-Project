@@ -5,13 +5,14 @@ import Link from 'next/link'
 import { Toaster } from 'react-hot-toast'
 import { getSession, clearSession } from '../../lib/auth'
 import { useAgentEvents } from '../../hooks/useAgentEvents'
-import { Users, FileText, LayoutDashboard, LogOut, Landmark } from 'lucide-react'
+import { Users, FileText, LayoutDashboard, LogOut, Landmark, Activity } from 'lucide-react'
 
 const navItems = [
   { href: '/dashboard',              label: 'Dashboard',    icon: LayoutDashboard },
   { href: '/dashboard/donors',       label: 'Donors',       icon: Users },
   { href: '/dashboard/requirements', label: 'Requirements', icon: FileText },
   { href: '/dashboard/initiatives',  label: 'Initiatives',  icon: Landmark },
+  { href: '/dashboard/agents',       label: 'Agent Jobs',   icon: Activity },
 ]
 
 function DashboardInner({ children }: { children: React.ReactNode }) {
@@ -41,7 +42,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <h1 className="text-base font-semibold text-gray-900">NGO Impact</h1>
           <p className="text-xs text-gray-400 mt-0.5">Admin Portal</p>
         </div>
-
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map(({ href, label, icon: Icon }) => {
             const active = pathname === href
@@ -61,7 +61,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             )
           })}
         </nav>
-
         <div className="p-3 border-t border-gray-200">
           <button
             onClick={handleLogout}
@@ -72,7 +71,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
         </div>
       </aside>
-
       <main className="flex-1 overflow-auto p-6">
         <DashboardInner>{children}</DashboardInner>
       </main>
