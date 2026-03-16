@@ -1,5 +1,17 @@
-﻿{
+{
   "name": "@ngo/auth",
   "version": "1.0.0",
-  "main": "src/index.ts"
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./encryption": "./src/encryption.ts"
+  },
+  "scripts": { "build": "tsc", "test": "vitest run" },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.500.0",
+    "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.0"
+  }
 }

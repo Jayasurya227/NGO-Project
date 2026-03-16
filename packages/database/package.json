@@ -1,16 +1,25 @@
 {
-    "name":  "@ngo/database",
-    "version":  "1.0.0",
-    "main":  "src/client.ts",
-    "scripts":  {
-                    "db:seed":  "ts-node prisma/seed.ts",
-                    "db:migrate":  "prisma migrate dev",
-                    "db:generate":  "prisma generate"
-                },
-    "devDependencies":  {
-                            "typescript":  "^5.3.0"
-                        },
-    "prisma":  {
-                   "seed":  "node prisma/seed.js"
-               }
+  "name": "@ngo/database",
+  "version": "1.0.0",
+  "main": "./src/client.ts",
+  "exports": {
+    ".": "./src/client.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "db:seed": "ts-node prisma/seed.ts",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.10.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.10.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  }
 }
