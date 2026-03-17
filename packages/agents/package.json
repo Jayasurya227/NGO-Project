@@ -4,22 +4,30 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./utils/embeddings": "./src/utils/embeddings.ts"
+    "./utils/embeddings": "./src/utils/embeddings.ts",
+    "./requirements-analyst": "./src/requirements-analyst/index.ts",
+    "./gap-diagnoser": "./src/gap-diagnoser/index.ts"
   },
-  "scripts": { "build": "tsc", "test": "vitest" },
+  "scripts": { "build": "tsc", "test": "vitest run" },
   "dependencies": {
     "@ngo/database": "workspace:*",
     "@ngo/audit": "workspace:*",
     "@ngo/auth": "workspace:*",
     "@ngo/queue": "workspace:*",
     "@ngo/storage": "workspace:*",
-    "@google/generative-ai": "^0.21.0",
-    "openai": "^4.28.0",
+    "@google-cloud/vertexai": "^1.0.0",
+    "google-auth-library": "^9.0.0",
+    "@google/generative-ai": "^0.24.1",
     "@langchain/langgraph": "^0.2.0",
     "@langchain/openai": "^0.0.28",
+    "openai": "^4.28.0",
+    "zod": "^3.22.0",
     "imghash": "^1.1.2",
     "pptxgenjs": "^3.12.0",
     "pdfkit": "^0.15.0",
     "dotenv": "^16.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.0"
   }
 }

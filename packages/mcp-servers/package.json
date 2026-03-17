@@ -1,5 +1,11 @@
-﻿{
+{
   "name": "@ngo/mcp-servers",
   "version": "1.0.0",
-  "main": "src/index.ts"
+  "main": "src/index.ts",
+  "dependencies": {
+    "pdf-parse": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/pdf-parse": "^1.1.5"
+  }
 }
