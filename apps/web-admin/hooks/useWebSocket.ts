@@ -15,7 +15,7 @@ export function useWebSocket(onEvent: (data: any) => void) {
     const session = getSession()
     if (!session) return
 
-    const ws = new WebSocket('ws://localhost:4000/ws')
+    const ws = new WebSocket('ws://localhost:4000/ws/notifications')
     wsRef.current = ws
 
     ws.onopen = () => {

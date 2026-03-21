@@ -4,19 +4,23 @@ import { api } from '../../lib/api'
 import { Users, FileText, Landmark, Activity } from 'lucide-react'
 
 export default function DashboardPage() {
-  const [donors, setDonors] = useState(0)
+  const [donors, setDonors]             = useState(0)
   const [requirements, setRequirements] = useState(0)
+  const [initiatives, setInitiatives]   = useState(0)
+  const [jobs, setJobs]                 = useState(0)
 
   useEffect(() => {
     api.get('/api/donors').then(r => setDonors(r.meta?.total ?? 0))
     api.get('/api/requirements').then(r => setRequirements(r.meta?.total ?? 0))
+    api.get('/api/initiatives').then(r => setInitiatives(r.meta?.total ?? 0))
+    api.get('/api/agents/jobs').then(r => setJobs(r.meta?.total ?? 0))
   }, [])
 
   const stats = [
-    { label: 'Total donors',       value: donors,       icon: Users,     color: 'bg-blue-50 text-blue-700' },
-    { label: 'Requirements',       value: requirements, icon: FileText,  color: 'bg-purple-50 text-purple-700' },
-    { label: 'Initiatives',        value: 0,            icon: Landmark,  color: 'bg-green-50 text-green-700' },
-    { label: 'Active agent jobs',  value: 0,            icon: Activity,  color: 'bg-amber-50 text-amber-700' },
+    { label: 'Total donors',      value: donors,       icon: Users,     color: 'bg-blue-50 text-blue-700' },
+    { label: 'Requirements',      value: requirements, icon: FileText,  color: 'bg-purple-50 text-purple-700' },
+    { label: 'Initiatives',       value: initiatives,  icon: Landmark,  color: 'bg-green-50 text-green-700' },
+    { label: 'Agent jobs',        value: jobs,         icon: Activity,  color: 'bg-amber-50 text-amber-700' },
   ]
 
   return (
