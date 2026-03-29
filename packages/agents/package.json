@@ -6,7 +6,9 @@
     ".": "./src/index.ts",
     "./utils/embeddings": "./src/utils/embeddings.ts",
     "./requirements-analyst": "./src/requirements-analyst/index.ts",
-    "./gap-diagnoser": "./src/gap-diagnoser/index.ts"
+    "./gap-diagnoser": "./src/gap-diagnoser/index.ts",
+    "./matching": "./src/matching/index.ts",
+    "./pitch-deck": "./src/pitch-deck/index.ts"
   },
   "scripts": { "build": "tsc", "test": "vitest run" },
   "dependencies": {

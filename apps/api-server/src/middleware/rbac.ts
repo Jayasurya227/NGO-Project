@@ -32,7 +32,7 @@ export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
 const PERMISSIONS: Record<string, string[]> = {
   NGO_ADMIN:       ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read"],
   PROGRAM_MANAGER: ["donor:read", "requirement:read", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read"],
-  DRM:             ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "agent:read"],
+  DRM: ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read"],
   FIELD_WORKER:    ["initiative:read"],
   FINANCE_OFFICER: ["donor:read", "requirement:read"],
   AUDITOR:         ["donor:read", "requirement:read", "initiative:read", "agent:read"],

@@ -97,7 +97,7 @@ export async function initiativesRoutes(app: FastifyInstance) {
         sdgTags: body.sdgTags,
         startDate: body.startDate ? new Date(body.startDate) : undefined,
         endDate: body.endDate ? new Date(body.endDate) : undefined,
-        status: "DRAFT",
+        status: "ACTIVE",
       },
       select: { id: true, title: true, sector: true, status: true, createdAt: true },
     });
@@ -111,7 +111,7 @@ export async function initiativesRoutes(app: FastifyInstance) {
       entityId: initiative.id,
       actorId: userId,
       actorType: "USER",
-      afterState: { title: body.title, sector: body.sector, status: "DRAFT" },
+      afterState: { title: body.title, sector: body.sector, status: "ACTIVE" },
     });
 
     return reply.status(201).send({ success: true, data: initiative });
