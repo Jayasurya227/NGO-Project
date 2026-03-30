@@ -157,7 +157,8 @@ export default function RequirementsPage() {
                     onClick={() => router.push(`/dashboard/requirements/${req.id}`)}
                     className={`transition-colors cursor-pointer ${needsAction ? 'hover:bg-orange-50 bg-orange-50/30' : 'hover:bg-gray-50'}`}>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-900">{req.donor?.orgName ?? 'Unknown'}</p>
+                      <p className="font-semibold text-gray-900">{(req.extractedFields as any)?.companyName || req.donor?.orgName || 'Unknown'}</p>
+
                       <p className="text-xs text-gray-400 mt-0.5">
                         {req.rawDocumentUrl
                           ? `📄 ${req.rawDocumentUrl.replace('uploaded:', '')}`

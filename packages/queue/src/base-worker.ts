@@ -45,7 +45,7 @@ export abstract class BaseAgentWorker<T extends { tenantId: string }> {
         }
       },
       {
-        connection,
+        connection: connection as any,
         concurrency: this.concurrency,
         limiter: {
           max: 20,
@@ -79,8 +79,8 @@ export abstract class BaseAgentWorker<T extends { tenantId: string }> {
             status === "COMPLETED" || status === "FAILED" ? new Date() : null,
         },
       });
-    } catch {
-      console.error(`[${ctx.agentName}] Failed to update job status in DB`);
+    } catch (err: any) {
+      console.error(`[${ctx.agentName}] Failed to update job status in DB: ${err.message}`);
     }
   }
 }

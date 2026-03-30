@@ -5,6 +5,7 @@ import { BaseAgentWorker } from "../base-worker";
 import { emitWsEvent } from "../ws-emit";
 import { runGapDiagnoser } from "../../../agents/src/gap-diagnoser/index";
 import { queues, DEFAULT_JOB_OPTIONS } from "../queues";
+import { prisma } from "@ngo/database";
 
 type GapAnalysisPayload = {
   requirementId: string;
@@ -21,11 +22,26 @@ class GapAnalysisWorker extends BaseAgentWorker<GapAnalysisPayload> {
 
     const report = await runGapDiagnoser({ requirementId, tenantId });
 
-    await queues.initiativeMatching.add(
+    const matchJob = await queues.initiativeMatching.add(
       "match",
       { requirementId, tenantId },
       DEFAULT_JOB_OPTIONS
     );
+
+    // Create log for the next job
+    await prisma.agentJobLog.upsert({
+      where: { jobId: matchJob.id! },
+      update: { status: "QUEUED" },
+      create: {
+        tenantId,
+        agentName: "initiative-matcher",
+        jobId: matchJob.id!,
+        modelVersion: "gemini-2.0-flash-001",
+        promptHash: "pending",
+        status: "QUEUED",
+        triggeredBy: "SYSTEM", // Triggered by previous worker
+      },
+    });
 
     await emitWsEvent(tenantId, {
       type: "APPROVAL_REQUIRED",

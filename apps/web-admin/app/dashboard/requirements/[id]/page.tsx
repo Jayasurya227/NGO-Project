@@ -255,17 +255,24 @@ export default function RequirementDetailPage() {
         </div>
       )}
 
-      {/* Match Results */}
-      {req.status === 'MATCHED' && req.matchCount > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">🎯 Matched Initiatives ({req.matchCount})</h3>
-          <div className="space-y-2">
-            {req.topMatches?.map((m: any, i: number) => (
-              <div key={m.id} className="flex items-center justify-between px-3 py-2 bg-purple-50 rounded-lg border border-purple-100">
-                <span className="text-sm text-purple-800 font-medium">#{i + 1} Match</span>
-                <span className="text-xs text-purple-600">Score: {m.overallScore ?? '—'}</span>
-              </div>
-            ))}
+      {/* Match Results Section */}
+      {req.status === 'MATCHED' && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-5 mb-4 shadow-sm shadow-purple-100">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-purple-900 flex items-center gap-2">
+                🎯 {req.matchCount ?? 0} Initiative Matches Found
+              </h3>
+              <p className="text-xs text-purple-700 mt-1">
+                AI has ranked the best initiatives for this requirement. Review the score breakdown and approve matches to proceed.
+              </p>
+            </div>
+            <button
+              onClick={() => router.push(`/dashboard/requirements/${id}/matches`)}
+              className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all flex-shrink-0"
+            >
+              View Full Match Results & Breakdown →
+            </button>
           </div>
         </div>
       )}

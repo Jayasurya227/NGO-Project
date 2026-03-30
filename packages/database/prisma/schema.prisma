@@ -6,7 +6,412 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [uuid_ossp(map: "uuid-ossp"), vector, pgcrypto]
+  extensions = [pgcrypto, uuid_ossp(map: "uuid-ossp"), vector]
+}
+
+model Tenant {
+  id                 String            @id @default(uuid())
+  name               String
+  subdomain          String            @unique
+  customDomain       String?           @unique
+  brandingConfig     Json
+  featureFlags       Json              @default("{}")
+  fcraRegistered     Boolean           @default(false)
+  registrationNumber String?
+  status             TenantStatus      @default(ONBOARDING)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  agentJobLogs       AgentJobLog[]
+  auditEvents        AuditEvent[]
+  beneficiaries      Beneficiary[]
+  contentArtifacts   ContentArtifact[]
+  donations          Donation[]
+  donors             Donor[]
+  initiatives        Initiative[]
+  stories            Story[]
+  users              User[]
+}
+
+model User {
+  id           String     @id @default(uuid())
+  tenantId     String
+  email        String
+  emailHash    String
+  fullNameEnc  Bytes
+  passwordHash String
+  role         UserRole
+  phoneHash    String?
+  mfaEnabled   Boolean    @default(false)
+  mfaSecret    String?
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+
+  @@unique([tenantId, emailHash])
+  @@index([emailHash])
+}
+
+model Donor {
+  id                String               @id @default(uuid())
+  tenantId          String
+  type              DonorType
+  orgName           String?
+  contactNameEnc    Bytes
+  emailEnc          Bytes
+  phoneEnc          Bytes?
+  panHash           String?
+  kycStatus         KycStatus            @default(NOT_REQUIRED)
+  notificationPrefs Json                 @default("{\"email\": true, \"inApp\": true, \"whatsapp\": true}")
+  unsubscribedAt    DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  commLogs          CommunicationLog[]
+  contracts         Contract[]
+  donations         Donation[]
+  tenant            Tenant               @relation(fields: [tenantId], references: [id])
+  sponsorReqs       SponsorRequirement[]
+
+  @@index([tenantId])
+}
+
+model SponsorRequirement {
+  id               String        @id @default(uuid())
+  tenantId         String
+  donorId          String
+  rawDocumentUrl   String?
+  extractedFields  Json?
+  confidenceScores Json?
+  status           ReqStatus     @default(PENDING_EXTRACTION)
+  version          Int           @default(1)
+  extractedByAgent String?
+  gapReportJson    Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  contracts        Contract[]
+  matchResults     MatchResult[]
+  donor            Donor         @relation(fields: [donorId], references: [id])
+
+  @@index([tenantId, status])
+}
+
+model Initiative {
+  id                  String                  @id @default(uuid())
+  tenantId            String
+  title               String
+  titleEmbedding       String?
+descriptionEmbedding String?
+  sector              Sector
+  geography           Json
+  description         String
+  targetBeneficiaries Int
+  budgetRequired      Decimal                 @db.Decimal(14, 2)
+  budgetFunded        Decimal                 @default(0) @db.Decimal(14, 2)
+  status              InitiativeStatus        @default(DRAFT)
+  embeddingVector     Unsupported("vector")?
+  sdgTags             String[]
+  startDate           DateTime?
+  endDate             DateTime?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+  beneficiaries       BeneficiaryInitiative[]
+  donations           Donation[]
+  tenant              Tenant                  @relation(fields: [tenantId], references: [id])
+  matchResults        MatchResult[]
+  milestones          Milestone[]
+  stories             Story[]
+
+  @@index([tenantId, sector, status])
+}
+
+model Beneficiary {
+  id                   String                  @id @default(uuid())
+  tenantId             String
+  anonId               String                  @unique
+  nameEnc              Bytes
+  dobYear              Int?
+  isMinor              Boolean                 @default(false)
+  guardianNameEnc      Bytes?
+  guardianRelationship String?
+  consentL1            Boolean                 @default(false)
+  consentL2            Boolean                 @default(false)
+  consentL3            Boolean                 @default(false)
+  consentUpdatedAt     DateTime?
+  consentWithdrawnAt   DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  tenant               Tenant                  @relation(fields: [tenantId], references: [id])
+  initiatives          BeneficiaryInitiative[]
+
+  @@index([tenantId])
+}
+
+model BeneficiaryInitiative {
+  beneficiaryId String
+  initiativeId  String
+  enrolledAt    DateTime    @default(now())
+  beneficiary   Beneficiary @relation(fields: [beneficiaryId], references: [id])
+  initiative    Initiative  @relation(fields: [initiativeId], references: [id])
+
+  @@id([beneficiaryId, initiativeId])
+}
+
+model Milestone {
+  id                   String          @id @default(uuid())
+  initiativeId         String
+  title                String
+  description          String
+  dueDate              DateTime
+  budgetAllocated      Decimal         @db.Decimal(14, 2)
+  status               MilestoneStatus @default(PLANNED)
+  evidenceRequirements Json
+  completionVerifiedBy String?
+  completionVerifiedAt DateTime?
+  sequenceOrder        Int             @default(0)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  allocations          Allocation[]
+  evidence             Evidence[]
+  initiative           Initiative      @relation(fields: [initiativeId], references: [id])
+  outcomes             Outcome[]
+
+  @@index([initiativeId, status])
+}
+
+model Contract {
+  id                String             @id @default(uuid())
+  tenantId          String
+  requirementId     String
+  donorId           String
+  milestoneSchedule Json
+  reportingCadence  ReportCadence
+  dataSharingLevel  DataSharingLevel
+  contractDocUrl    String?
+  status            ContractStatus     @default(DRAFT)
+  signedByNgoAt     DateTime?
+  signedByDonorAt   DateTime?
+  digioRequestId    String?
+  expiresAt         DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  donor             Donor              @relation(fields: [donorId], references: [id])
+  requirement       SponsorRequirement @relation(fields: [requirementId], references: [id])
+  donations         Donation[]
+
+  @@index([tenantId, status])
+}
+
+model Donation {
+  id               String         @id @default(uuid())
+  tenantId         String
+  donorId          String
+  initiativeId     String?
+  contractId       String?
+  amount           Decimal        @db.Decimal(14, 2)
+  currency         String         @default("INR")
+  paymentGateway   PaymentGateway
+  gatewayPaymentId String         @unique
+  idempotencyKey   String         @unique
+  status           DonationStatus @default(PENDING)
+  receiptSentAt    DateTime?
+  receiptUrl       String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  allocations      Allocation[]
+  contract         Contract?      @relation(fields: [contractId], references: [id])
+  donor            Donor          @relation(fields: [donorId], references: [id])
+  initiative       Initiative?    @relation(fields: [initiativeId], references: [id])
+  tenant           Tenant         @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, donorId])
+}
+
+model Allocation {
+  id          String           @id @default(uuid())
+  donationId  String
+  milestoneId String
+  amount      Decimal          @db.Decimal(14, 2)
+  status      AllocationStatus @default(ALLOCATED)
+  disbursedAt DateTime?
+  confirmedBy String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  donation    Donation         @relation(fields: [donationId], references: [id])
+  milestone   Milestone        @relation(fields: [milestoneId], references: [id])
+}
+
+model Evidence {
+  id                 String              @id @default(uuid())
+  milestoneId        String
+  submittedBy        String
+  type               EvidenceType
+  fileUrl            String?
+  fileSizeBytes      BigInt?
+  gpsLat             Decimal?            @db.Decimal(10, 7)
+  gpsLng             Decimal?            @db.Decimal(10, 7)
+  capturedAt         DateTime
+  verificationScore  Int?
+  verificationFlags  String[]
+  pHash              String?
+  createdAt          DateTime            @default(now())
+  milestone          Milestone           @relation(fields: [milestoneId], references: [id])
+  verificationResult VerificationResult?
+
+  @@index([milestoneId])
+}
+
+model VerificationResult {
+  id           String    @id @default(uuid())
+  evidenceId   String    @unique
+  score        Int
+  flags        String[]
+  autoApproved Boolean   @default(false)
+  reviewedBy   String?
+  reviewedAt   DateTime?
+  reviewNotes  String?
+  createdAt    DateTime  @default(now())
+  evidence     Evidence  @relation(fields: [evidenceId], references: [id])
+}
+
+model Outcome {
+  id          String            @id @default(uuid())
+  milestoneId String
+  kpiKey      String
+  kpiLabel    String
+  targetValue Decimal?          @db.Decimal(12, 2)
+  actualValue Decimal?          @db.Decimal(12, 2)
+  unit        String?
+  dataStatus  OutcomeDataStatus @default(PENDING)
+  validatedBy String?
+  validatedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  milestone   Milestone         @relation(fields: [milestoneId], references: [id])
+}
+
+model Story {
+  id                String        @id @default(uuid())
+  tenantId          String
+  initiativeId      String
+  variant           StoryVariant
+  contentJson       Json
+  consentLevelsUsed Int[]
+  dignityScore      Decimal?      @db.Decimal(3, 1)
+  aiModelUsed       String?
+  promptHash        String?
+  approvalStatus    StoryApproval @default(DRAFT)
+  approvedByPmAt    DateTime?
+  approvedByAdminAt DateTime?
+  publishedAt       DateTime?
+  publishedUrl      String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  initiative        Initiative    @relation(fields: [initiativeId], references: [id])
+  tenant            Tenant        @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, approvalStatus])
+}
+
+model MatchResult {
+  id                  String             @id @default(uuid())
+  requirementId       String
+  initiativeId        String
+  overallScore        Int
+sectorAlignmentScore    Decimal? @db.Decimal(5, 2)
+budgetAlignmentScore    Decimal? @db.Decimal(5, 2)
+geographyAlignmentScore Decimal? @db.Decimal(5, 2)
+  subScores           Json
+  explanation         String
+  hardConstraintCheck String
+  humanOverride       String?
+  humanOverrideBy     String?
+  rank                Int?
+  createdAt           DateTime           @default(now())
+  initiative          Initiative         @relation(fields: [initiativeId], references: [id])
+  requirement         SponsorRequirement @relation(fields: [requirementId], references: [id])
+
+  @@index([requirementId])
+}
+
+model ContentArtifact {
+  id                String           @id @default(uuid())
+  tenantId          String
+  type              ArtifactType
+  fileUrl           String?
+  content           Json?
+  templateVersion   String?
+  aiModelUsed       String?
+  promptHash        String?
+  approvalStatus    ArtifactApproval @default(DRAFT)
+  approvedBy        String?
+  approvedAt        DateTime?
+  publishedAt       DateTime?
+  relatedEntityType String?
+  relatedEntityId   String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  tenant            Tenant           @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, type, approvalStatus])
+}
+
+model CommunicationLog {
+  id                String      @id @default(uuid())
+  tenantId          String
+  donorId           String
+  channel           CommChannel
+  subject           String?
+  status            CommStatus  @default(PENDING)
+  sentAt            DateTime?
+  openedAt          DateTime?
+  clickedAt         DateTime?
+  bouncedAt         DateTime?
+  messageIdExternal String?
+  createdAt         DateTime    @default(now())
+  donor             Donor       @relation(fields: [donorId], references: [id])
+
+  @@index([tenantId, donorId])
+}
+
+model AuditEvent {
+  id          String   @id @default(uuid())
+  tenantId    String
+  eventType   String
+  entityType  String
+  entityId    String
+  actorId     String?
+  actorType   String?
+  beforeState Json?
+  afterState  Json
+  metadata    Json?
+  timestamp   DateTime @default(now())
+  prevHash    String?
+  currentHash String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, timestamp])
+}
+
+model AgentJobLog {
+  id           String    @id @default(uuid())
+  tenantId     String
+  agentName    String
+  jobId        String    @unique
+  modelVersion String
+  promptHash   String
+  inputTokens  Int?
+  outputTokens Int?
+  latencyMs    Int?
+  status       JobStatus @default(QUEUED)
+  error        String?
+  triggeredBy  String?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, agentName, status])
 }
 
 enum TenantStatus {
@@ -58,6 +463,9 @@ enum Sector {
   LIVELIHOOD
   ENVIRONMENT
   WATER_SANITATION
+  INFRASTRUCTURE
+  WOMEN_EMPOWERMENT
+  CHILD_WELFARE
   OTHER
 }
 
@@ -196,389 +604,4 @@ enum OutcomeDataStatus {
   EXTRACTED
   VALIDATED
   INSUFFICIENT_DATA
-}
-
-model Tenant {
-  id                 String            @id @default(uuid())
-  name               String
-  subdomain          String            @unique
-  customDomain       String?           @unique
-  brandingConfig     Json
-  featureFlags       Json              @default("{}")
-  fcraRegistered     Boolean           @default(false)
-  registrationNumber String?
-  status             TenantStatus      @default(ONBOARDING)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  users              User[]
-  donors             Donor[]
-  initiatives        Initiative[]
-  beneficiaries      Beneficiary[]
-  donations          Donation[]
-  stories            Story[]
-  auditEvents        AuditEvent[]
-  contentArtifacts   ContentArtifact[]
-  agentJobLogs       AgentJobLog[]
-}
-
-model User {
-  id           String     @id @default(uuid())
-  tenantId     String
-  tenant       Tenant     @relation(fields: [tenantId], references: [id])
-  email        String
-  emailHash    String
-  fullNameEnc  Bytes
-  passwordHash String
-  role         UserRole
-  phoneHash    String?
-  mfaEnabled   Boolean    @default(false)
-  mfaSecret    String?
-  status       UserStatus @default(ACTIVE)
-  lastLoginAt  DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  @@unique([tenantId, emailHash])
-  @@index([emailHash])
-}
-
-model Donor {
-  id                String               @id @default(uuid())
-  tenantId          String
-  tenant            Tenant               @relation(fields: [tenantId], references: [id])
-  type              DonorType
-  orgName           String?
-  contactNameEnc    Bytes
-  emailEnc          Bytes
-  phoneEnc          Bytes?
-  panHash           String?
-  kycStatus         KycStatus            @default(NOT_REQUIRED)
-  notificationPrefs Json                 @default("{\"email\":true,\"whatsapp\":true,\"inApp\":true}")
-  unsubscribedAt    DateTime?
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  donations         Donation[]
-  sponsorReqs       SponsorRequirement[]
-  contracts         Contract[]
-  commLogs          CommunicationLog[]
-  @@index([tenantId])
-}
-
-model SponsorRequirement {
-  id               String        @id @default(uuid())
-  tenantId         String
-  donorId          String
-  donor            Donor         @relation(fields: [donorId], references: [id])
-  rawDocumentUrl   String?
-  extractedFields  Json?
-  confidenceScores Json?
-  status           ReqStatus     @default(PENDING_EXTRACTION)
-  version          Int           @default(1)
-  extractedByAgent String?
-  gapReportJson    Json?
-  matchResults     MatchResult[]
-  contracts        Contract[]
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  @@index([tenantId, status])
-}
-
-model Initiative {
-  id                  String                  @id @default(uuid())
-  tenantId            String
-  tenant              Tenant                  @relation(fields: [tenantId], references: [id])
-  title               String
-  sector              Sector
-  geography           Json
-  description         String
-  targetBeneficiaries Int
-  budgetRequired      Decimal                 @db.Decimal(14, 2)
-  budgetFunded        Decimal                 @default(0) @db.Decimal(14, 2)
-  status              InitiativeStatus        @default(DRAFT)
-  embeddingVector     Unsupported("vector(768)")?
-  sdgTags             String[]
-  startDate           DateTime?
-  endDate             DateTime?
-  milestones          Milestone[]
-  matchResults        MatchResult[]
-  beneficiaries       BeneficiaryInitiative[]
-  donations           Donation[]
-  stories             Story[]
-  createdAt           DateTime                @default(now())
-  updatedAt           DateTime                @updatedAt
-  @@index([tenantId, sector, status])
-}
-
-model Beneficiary {
-  id                   String                  @id @default(uuid())
-  tenantId             String
-  tenant               Tenant                  @relation(fields: [tenantId], references: [id])
-  anonId               String                  @unique
-  nameEnc              Bytes
-  dobYear              Int?
-  isMinor              Boolean                 @default(false)
-  guardianNameEnc      Bytes?
-  guardianRelationship String?
-  consentL1            Boolean                 @default(false)
-  consentL2            Boolean                 @default(false)
-  consentL3            Boolean                 @default(false)
-  consentUpdatedAt     DateTime?
-  consentWithdrawnAt   DateTime?
-  initiatives          BeneficiaryInitiative[]
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
-  @@index([tenantId])
-}
-
-model BeneficiaryInitiative {
-  beneficiaryId String
-  initiativeId  String
-  enrolledAt    DateTime    @default(now())
-  beneficiary   Beneficiary @relation(fields: [beneficiaryId], references: [id])
-  initiative    Initiative  @relation(fields: [initiativeId], references: [id])
-  @@id([beneficiaryId, initiativeId])
-}
-
-model Milestone {
-  id                   String          @id @default(uuid())
-  initiativeId         String
-  initiative           Initiative      @relation(fields: [initiativeId], references: [id])
-  title                String
-  description          String
-  dueDate              DateTime
-  budgetAllocated      Decimal         @db.Decimal(14, 2)
-  status               MilestoneStatus @default(PLANNED)
-  evidenceRequirements Json
-  completionVerifiedBy String?
-  completionVerifiedAt DateTime?
-  sequenceOrder        Int             @default(0)
-  evidence             Evidence[]
-  allocations          Allocation[]
-  outcomes             Outcome[]
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
-  @@index([initiativeId, status])
-}
-
-model Contract {
-  id                String             @id @default(uuid())
-  tenantId          String
-  requirementId     String
-  requirement       SponsorRequirement @relation(fields: [requirementId], references: [id])
-  donorId           String
-  donor             Donor              @relation(fields: [donorId], references: [id])
-  milestoneSchedule Json
-  reportingCadence  ReportCadence
-  dataSharingLevel  DataSharingLevel
-  contractDocUrl    String?
-  status            ContractStatus     @default(DRAFT)
-  signedByNgoAt     DateTime?
-  signedByDonorAt   DateTime?
-  digioRequestId    String?
-  expiresAt         DateTime?
-  donations         Donation[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  @@index([tenantId, status])
-}
-
-model Donation {
-  id               String         @id @default(uuid())
-  tenantId         String
-  tenant           Tenant         @relation(fields: [tenantId], references: [id])
-  donorId          String
-  donor            Donor          @relation(fields: [donorId], references: [id])
-  initiativeId     String?
-  initiative       Initiative?    @relation(fields: [initiativeId], references: [id])
-  contractId       String?
-  contract         Contract?      @relation(fields: [contractId], references: [id])
-  amount           Decimal        @db.Decimal(14, 2)
-  currency         String         @default("INR")
-  paymentGateway   PaymentGateway
-  gatewayPaymentId String         @unique
-  idempotencyKey   String         @unique
-  status           DonationStatus @default(PENDING)
-  receiptSentAt    DateTime?
-  receiptUrl       String?
-  allocations      Allocation[]
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  @@index([tenantId, donorId])
-}
-
-model Allocation {
-  id               String           @id @default(uuid())
-  donationId       String
-  donation         Donation         @relation(fields: [donationId], references: [id])
-  milestoneId      String
-  milestone        Milestone        @relation(fields: [milestoneId], references: [id])
-  amount           Decimal          @db.Decimal(14, 2)
-  status           AllocationStatus @default(ALLOCATED)
-  disbursedAt      DateTime?
-
-  confirmedBy      String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-}
-
-model Evidence {
-  id                 String              @id @default(uuid())
-  milestoneId        String
-  milestone          Milestone           @relation(fields: [milestoneId], references: [id])
-  submittedBy        String
-  type               EvidenceType
-  fileUrl            String?
-  fileSizeBytes      BigInt?
-  gpsLat             Decimal?            @db.Decimal(10, 7)
-  gpsLng             Decimal?            @db.Decimal(10, 7)
-  capturedAt         DateTime
-  verificationScore  Int?
-  verificationFlags  String[]
-  pHash              String?
-  verificationResult VerificationResult?
-  createdAt          DateTime            @default(now())
-  @@index([milestoneId])
-}
-
-model VerificationResult {
-  id           String    @id @default(uuid())
-  evidenceId   String    @unique
-  evidence     Evidence  @relation(fields: [evidenceId], references: [id])
-  score        Int
-  flags        String[]
-  autoApproved Boolean   @default(false)
-  reviewedBy   String?
-  reviewedAt   DateTime?
-  reviewNotes  String?
-  createdAt    DateTime  @default(now())
-}
-
-model Outcome {
-  id          String            @id @default(uuid())
-  milestoneId String
-  milestone   Milestone         @relation(fields: [milestoneId], references: [id])
-  kpiKey      String
-  kpiLabel    String
-  targetValue Decimal?          @db.Decimal(12, 2)
-  actualValue Decimal?          @db.Decimal(12, 2)
-  unit        String?
-  dataStatus  OutcomeDataStatus @default(PENDING)
-  validatedBy String?
-  validatedAt DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-}
-
-model Story {
-  id                String        @id @default(uuid())
-  tenantId          String
-  tenant            Tenant        @relation(fields: [tenantId], references: [id])
-  initiativeId      String
-  initiative        Initiative    @relation(fields: [initiativeId], references: [id])
-  variant           StoryVariant
-  contentJson       Json
-  consentLevelsUsed Int[]
-  dignityScore      Decimal?      @db.Decimal(3, 1)
-  aiModelUsed       String?
-  promptHash        String?
-  approvalStatus    StoryApproval @default(DRAFT)
-  approvedByPmAt    DateTime?
-  approvedByAdminAt DateTime?
-  publishedAt       DateTime?
-  publishedUrl      String?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  @@index([tenantId, approvalStatus])
-}
-
-model MatchResult {
-  id                  String             @id @default(uuid())
-  requirementId       String
-  requirement         SponsorRequirement @relation(fields: [requirementId], references: [id])
-  initiativeId        String
-  initiative          Initiative         @relation(fields: [initiativeId], references: [id])
-  overallScore        Int
-  subScores           Json
-  explanation         String
-  hardConstraintCheck String
-  humanOverride       String?
-  humanOverrideBy     String?
-  rank                Int?
-  createdAt           DateTime           @default(now())
-  @@index([requirementId])
-}
-
-model ContentArtifact {
-  id                String           @id @default(uuid())
-  tenantId          String
-  tenant            Tenant           @relation(fields: [tenantId], references: [id])
-  type              ArtifactType
-  fileUrl           String?
-  content           Json?
-  templateVersion   String?
-  aiModelUsed       String?
-  promptHash        String?
-  approvalStatus    ArtifactApproval @default(DRAFT)
-  approvedBy        String?
-  approvedAt        DateTime?
-  publishedAt       DateTime?
-  relatedEntityType String?
-  relatedEntityId   String?
-  createdAt         DateTime         @default(now())
-  updatedAt         DateTime         @updatedAt
-  @@index([tenantId, type, approvalStatus])
-}
-
-model CommunicationLog {
-  id                String      @id @default(uuid())
-  tenantId          String
-  donorId           String
-  donor             Donor       @relation(fields: [donorId], references: [id])
-  channel           CommChannel
-  subject           String?
-  status            CommStatus  @default(PENDING)
-  sentAt            DateTime?
-  openedAt          DateTime?
-  clickedAt         DateTime?
-  bouncedAt         DateTime?
-  messageIdExternal String?
-  createdAt         DateTime    @default(now())
-  @@index([tenantId, donorId])
-}
-
-model AuditEvent {
-  id          String   @id @default(uuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  eventType   String
-  entityType  String
-  entityId    String
-  actorId     String?
-  actorType   String?
-  beforeState Json?
-  afterState  Json
-  metadata    Json?
-  timestamp   DateTime @default(now())
-  prevHash    String?
-  currentHash String
-  @@index([tenantId, entityType, entityId])
-  @@index([tenantId, timestamp])
-}
-
-model AgentJobLog {
-  id           String    @id @default(uuid())
-  tenantId     String
-  tenant       Tenant    @relation(fields: [tenantId], references: [id])
-  agentName    String
-  jobId        String    @unique
-  modelVersion String
-  promptHash   String
-  inputTokens  Int?
-  outputTokens Int?
-  latencyMs    Int?
-  status       JobStatus @default(QUEUED)
-  error        String?
-  triggeredBy  String?
-  createdAt    DateTime  @default(now())
-  completedAt  DateTime?
-  @@index([tenantId, agentName, status])
 }

@@ -124,13 +124,19 @@ export async function runGapDiagnoser(params: {
     recommendation = "PROCEED_TO_MATCHING";
   }
 
-  const vertexAI = getVertexClient();
-  const model = vertexAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL ?? "gemini-2.0-flash-001",
-    generationConfig: { temperature: 0.3, maxOutputTokens: 200 },
-  });
+  let narrative = "Gap analysis summary could not be generated.";
+  
+  if (process.env.MOCK_AI === "true") {
+     narrative = `MOCK ANALYSIS: Based on the requirement for a ${fields.sector} initiative in ${fields.geography.state ?? "various locations"}, we have identified ${criticalGaps.length} critical gaps. We recommend that you ${recommendation.replace(/_/g, " ").toLowerCase()} to address these needs effectively within the current infrastructure.`;
+  } else {
+    try {
+      const vertexAI = getVertexClient();
+      const model = vertexAI.getGenerativeModel({
+        model: process.env.GEMINI_MODEL ?? "gemini-2.0-flash-001",
+        generationConfig: { temperature: 0.3, maxOutputTokens: 200 },
+      });
 
-  const narrativePrompt = `You are a capacity assessment analyst for a social impact NGO.
+      const narrativePrompt = `You are a capacity assessment analyst for a social impact NGO.
 
 Write a concise 3-4 sentence gap analysis summary for an NGO manager.
 Tone: professional, direct, factual. Do not use bullet points.
@@ -141,9 +147,14 @@ Critical gaps: ${criticalGaps.map((g) => g.description).join("; ") || "None iden
 Minor gaps: ${minorGaps.map((g) => g.description).join("; ") || "None"}.
 Recommendation: ${recommendation.replace(/_/g, " ").toLowerCase()}.`;
 
-  const narrativeResult = await model.generateContent(narrativePrompt);
-  const narrative = narrativeResult.response.candidates?.[0]?.content?.parts?.[0]?.text
-    ?? "Gap analysis could not be generated.";
+      const narrativeResult = await model.generateContent(narrativePrompt);
+      narrative = narrativeResult.response.candidates?.[0]?.content?.parts?.[0]?.text
+        ?? "Gap analysis summary generated with empty content.";
+    } catch (err) {
+      console.error("[gap-diagnoser] Narrative generation failed:", err);
+      narrative = "AI Narrative generation temporarily unavailable. Results below are based on rule-matching.";
+    }
+  }
 
   const gapReport: GapReport = {
     hasGaps: gaps.length > 0,

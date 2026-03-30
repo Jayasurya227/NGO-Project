@@ -1,9 +1,12 @@
-﻿import { readFileSync } from "fs";
+import { readFileSync } from "fs";
 import { resolve } from "path";
-
 function loadEnv() {
   try {
-    const content = readFileSync(resolve(process.cwd(), ".env"), "utf-8");
+    let envPath = resolve(process.cwd(), ".env");
+    if (!require("fs").existsSync(envPath)) {
+      envPath = resolve(process.cwd(), "../../.env");
+    }
+    const content = readFileSync(envPath, "utf-8");
     for (const line of content.split(/\r?\n/)) {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) continue;
@@ -16,7 +19,6 @@ function loadEnv() {
   } catch {}
 }
 loadEnv();
-
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import multipart from "@fastify/multipart";
@@ -25,16 +27,18 @@ import { requirementsRoutes } from "./routes/requirements";
 import { donorsRoutes } from "./routes/donors";
 import { initiativesRoutes } from "./routes/initiatives";
 import { agentRoutes } from "./routes/agents";
+import { contentRoutes } from "./routes/content";
+import { storyRoutes } from "./routes/stories";
+import { milestonesRoutes } from "./routes/milestones";
 import { websocketPlugin } from "./ws/plugin";
-
 async function start() {
-  const app = Fastify({ logger: false });
+  const app = Fastify({ logger: false, ignoreTrailingSlash: true });
 
   await app.register(cors, {
-    origin: ["http://localhost:3000", "http://localhost:3001"],
+    origin: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   });
-
   await app.register(multipart, {
     limits: {
       fileSize: 50 * 1024 * 1024,
@@ -42,31 +46,35 @@ async function start() {
       fields: 10,
     },
   });
-
-  app.setErrorHandler((error, req, reply) => {
+  app.setErrorHandler((error: any, req, reply) => {
     console.error("[API Error]", error.message);
     reply.status(500).send({
       success: false,
       error: { code: "INTERNAL_ERROR", message: error.message ?? "Internal server error" },
     });
   });
-
   app.get("/health", async () => ({
     status: "ok",
     timestamp: new Date().toISOString(),
     version: "1.0.0",
   }));
-
   await websocketPlugin(app);
-  await authRoutes(app);
-  await requirementsRoutes(app);
-  await donorsRoutes(app);
-  await initiativesRoutes(app);
-  await agentRoutes(app);
+  
+  // Register all routes with consistent /api prefix
+  app.register(authRoutes, { prefix: "/api/auth" });
+  app.register(requirementsRoutes, { prefix: "/api/requirements" });
+  app.register(donorsRoutes, { prefix: "/api/donors" });
+  app.register(initiativesRoutes, { prefix: "/api/initiatives" });
+  app.register(agentRoutes, { prefix: "/api/agents" });
+  app.register(contentRoutes, { prefix: "/api/content" });
+  app.register(storyRoutes, { prefix: "/api/stories" });
+  app.register(milestonesRoutes, { prefix: "/api/initiatives" }); // Mounts sub-routes under initiatives
 
+  
   const port = parseInt(process.env.API_PORT ?? "4000");
   await app.listen({ port, host: "0.0.0.0" });
   console.log(`✅ API server running on http://localhost:${port}`);
+  console.log(app.printRoutes());
 }
 
 start().catch((err) => {

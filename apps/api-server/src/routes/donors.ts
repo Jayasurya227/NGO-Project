@@ -20,8 +20,8 @@ const CreateDonorBody = z.object({
 
 export async function donorsRoutes(app: FastifyInstance) {
 
-  // GET /api/donors
-  app.get("/api/donors", { preHandler: requirePermission("donor:read") }, async (req, reply) => {
+  // GET /
+  app.get("/", { preHandler: requirePermission("donor:read") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const page = Number((req.query as any).page) || 1;
     const limit = Number((req.query as any).limit) || 20;
@@ -44,8 +44,8 @@ export async function donorsRoutes(app: FastifyInstance) {
     });
   });
 
-  // GET /api/donors/:id
-  app.get("/api/donors/:id", { preHandler: requirePermission("donor:read") }, async (req, reply) => {
+  // GET /:id
+  app.get("/:id", { preHandler: requirePermission("donor:read") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const { id } = req.params as { id: string };
 
@@ -67,8 +67,8 @@ export async function donorsRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /api/donors
-  app.post("/api/donors", { preHandler: requirePermission("donor:create") }, async (req, reply) => {
+  // POST /
+  app.post("/", { preHandler: requirePermission("donor:create") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const userId = (req as any).userId;
 
@@ -109,5 +109,154 @@ export async function donorsRoutes(app: FastifyInstance) {
     });
 
     return reply.status(201).send({ success: true, data: donor });
+  });
+
+  // GET /inquiries (Admin only)
+  app.get("/inquiries", { preHandler: requirePermission("donor:read") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
+    const inquiries = await prisma.auditEvent.findMany({
+      where: { tenantId, eventType: "DONOR_INQUIRY" },
+      orderBy: { timestamp: "desc" },
+    });
+    
+    // Fetch all responses and deletions to merge/filter
+    const subEvents = await prisma.auditEvent.findMany({
+      where: { 
+        tenantId, 
+        eventType: { in: ["DONOR_INQUIRY_RESPONSE", "DONOR_INQUIRY_DELETED"] } 
+      },
+    });
+
+    // Enrich and filter out deleted ones
+    const enriched = (await Promise.all(inquiries.map(async (iq) => {
+      const isDeleted = subEvents.some(s => s.entityId === iq.id && s.eventType === "DONOR_INQUIRY_DELETED");
+      if (isDeleted) return null;
+
+      const donor = iq.actorId ? await prisma.donor.findUnique({ where: { id: iq.actorId }, select: { orgName: true } }) : null;
+      const responseEvent = subEvents.find(r => r.entityId === iq.id && r.eventType === "DONOR_INQUIRY_RESPONSE");
+      
+      return { 
+        ...iq, 
+        donorOrg: donor?.orgName || 'Unknown Donor',
+        metadata: responseEvent ? {
+          response: (responseEvent.afterState as any).message,
+          respondedBy: responseEvent.actorId,
+          respondedAt: responseEvent.timestamp,
+        } : iq.metadata
+      };
+    }))).filter(Boolean);
+
+    return reply.send({ success: true, data: enriched });
+  });
+
+  // PATCH /inquiries/:id (DRM response)
+  app.patch<{ Params: { id: string } }>("/inquiries/:id", {
+    preHandler: requirePermission("donor:update"), 
+  }, async (req, reply) => {
+    const { tenantId, userId } = req as any;
+    const { id } = req.params;
+    const { response } = req.body as { response: string };
+
+    if (!response || response.trim().length < 5) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "Response must be at least 5 characters long" },
+      });
+    }
+
+    const inquiry = await prisma.auditEvent.findUnique({
+      where: { id },
+    });
+
+    if (!inquiry || inquiry.tenantId !== tenantId || inquiry.eventType !== "DONOR_INQUIRY") {
+      return reply.status(404).send({
+        success: false,
+        error: { code: "NOT_FOUND", message: "Inquiry not found" },
+      });
+    }
+
+    // Since audit events are hash-chained and immutable, 
+    // we create a NEW event for the response instead of updating the inquiry.
+    await prisma.auditEvent.create({
+      data: {
+        tenantId,
+        eventType: "DONOR_INQUIRY_RESPONSE",
+        entityType: "AuditEvent",
+        entityId: id, // Original inquiry ID
+        actorId: userId,
+        actorType: "USER",
+        afterState: { message: response },
+        currentHash: `resp-hash-${Date.now()}`,
+      },
+    });
+
+    return reply.send({ success: true, message: "Response saved successfully" });
+  });
+
+    app.delete<{ Params: { id: string } }>("/inquiries/:id", {
+      preHandler: requirePermission("donor:update"), 
+    }, async (req, reply) => {
+      const { tenantId, userId } = req as any;
+      const { id } = req.params;
+
+      const inquiry = await prisma.auditEvent.findUnique({ where: { id } });
+      if (!inquiry || inquiry.tenantId !== tenantId) {
+        return reply.status(404).send({ success: false, error: { message: "Inquiry not found" } });
+      }
+
+      await prisma.auditEvent.create({
+        data: {
+          tenantId,
+          eventType: "DONOR_INQUIRY_DELETED",
+          entityType: "AuditEvent",
+          entityId: id,
+          actorId: userId,
+          actorType: "USER",
+          afterState: { deleted: true },
+          currentHash: `del-hash-${Date.now()}`,
+        },
+      });
+
+      return reply.send({ success: true, message: "Inquiry deleted successfully" });
+    });
+
+  // GET /my-inquiries (Donor consolidated view)
+  app.get("/my-inquiries", { preHandler: requirePermission("initiative:read") }, async (req, reply) => {
+    const { tenantId } = req as any;
+    const actorId = (req as any).user?.userId ?? (req as any).user?.donorId ?? "system";
+
+    const inquiries = await prisma.auditEvent.findMany({
+      where: { 
+        tenantId, 
+        actorId,
+        eventType: "DONOR_INQUIRY"
+      },
+      orderBy: { timestamp: "desc" },
+    });
+
+    // Fetch all sub-events (responses, deletions) to merge/filter
+    const subEvents = await prisma.auditEvent.findMany({
+      where: { 
+        tenantId, 
+        entityType: "AuditEvent"
+      },
+    });
+
+    const enriched = inquiries.map(iq => {
+      const isDeleted = subEvents.some(s => s.entityId === iq.id && s.eventType === "DONOR_INQUIRY_DELETED");
+      if (isDeleted) return null;
+
+      const responseEvent = subEvents.find(r => r.entityId === iq.id && r.eventType === "DONOR_INQUIRY_RESPONSE");
+      return {
+        ...iq,
+        metadata: responseEvent ? {
+          response: (responseEvent.afterState as any).message,
+          respondedBy: responseEvent.actorId,
+          respondedAt: responseEvent.timestamp,
+        } : iq.metadata
+      };
+    }).filter(Boolean);
+
+    return reply.send({ success: true, data: enriched });
   });
 }

@@ -6,7 +6,7 @@
     ".": "./src/client.ts"
   },
   "scripts": { "build": "tsc" },
-  "dependencies": { "@prisma/client": "^5.10.0" },
-  "devDependencies": { "prisma": "^5.10.0", "ts-node": "^10.9.0" },
+  "dependencies": { "@prisma/client": "^5.22.0" },
+  "devDependencies": { "prisma": "^5.22.0", "ts-node": "^10.9.0" },
   "prisma": { "seed": "ts-node --transpile-only prisma/seed.ts" }
 }

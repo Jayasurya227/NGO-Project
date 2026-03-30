@@ -31,6 +31,10 @@ Livelihood includes micro-finance, self-help groups, and income generation.
 Extract Indian state names exactly as they appear. Do not abbreviate.
 If multiple states are mentioned, use the PRIMARY one in the state field.
 
+## COMPANY IDENTIFICATION
+Extract the full legal name of the company or foundation issuing the RFP (e.g. "Tata Consultancy Services Ltd", "Reliance Foundation"). 
+Prioritize the name appearing in the header or formal "About the Company" section.
+
 ## CRITICAL RULES
 1. Never fabricate information not present in the document — if unsure, set confidence to 0.0
 2. Set all value fields to null (not empty string) when not present in the document

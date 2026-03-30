@@ -5,6 +5,10 @@ export const ExtractionSchema = z.object({
     "EDUCATION", "HEALTHCARE", "LIVELIHOOD",
     "ENVIRONMENT", "WATER_SANITATION", "OTHER",
   ]).describe("Primary sector focus of the CSR requirement"),
+  
+  companyName: z.string().nullable().describe("Executing company or foundation name (e.g. TCS Ltd)"),
+  companyNameConf: z.number().min(0).max(1).describe("Confidence in company name extraction"),
+
 
   sectorConfidence: z.number().min(0).max(1)
     .describe("Confidence 0.0-1.0 that the sector was correctly identified"),
@@ -62,6 +66,8 @@ export function buildConfidenceMap(result: ExtractionResult): Record<string, num
     budget: result.budget.conf,
     durationMonths: result.durationMonths.conf,
     reportingCadence: result.reportingCadence.conf,
+    companyName: result.companyNameConf,
+
     primaryKpis: result.primaryKpis.length > 0
       ? result.primaryKpis.reduce((sum, k) => sum + k.conf, 0) / result.primaryKpis.length
       : 0,

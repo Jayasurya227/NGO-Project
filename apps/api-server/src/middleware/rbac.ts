@@ -1,4 +1,4 @@
-﻿import { FastifyRequest, FastifyReply } from "fastify";
+import { FastifyRequest, FastifyReply } from "fastify";
 import * as jwt from "jsonwebtoken";
 
 export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
@@ -9,7 +9,6 @@ export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
       error: { code: "UNAUTHORIZED", message: "No token provided" },
     });
   }
-
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(
@@ -30,19 +29,19 @@ export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
 
 // Role permission map
 const PERMISSIONS: Record<string, string[]> = {
-  NGO_ADMIN:       ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read"],
-  PROGRAM_MANAGER: ["donor:read", "requirement:read", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read"],
-  DRM:             ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "agent:read"],
-  FIELD_WORKER:    ["initiative:read"],
+  NGO_ADMIN:       ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "initiative:delete", "agent:read", "content:read", "content:approve", "stories:read"],
+  PROGRAM_MANAGER: ["donor:read", "requirement:read", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "initiative:delete", "agent:read", "content:read", "content:approve", "stories:read"],
+  DRM:             ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "initiative:delete", "agent:read", "content:read", "content:approve", "stories:read"],
+  FIELD_WORKER:    ["initiative:read", "stories:read"],
   FINANCE_OFFICER: ["donor:read", "requirement:read"],
-  AUDITOR:         ["donor:read", "requirement:read", "initiative:read", "agent:read"],
+  AUDITOR:         ["donor:read", "requirement:read", "initiative:read", "agent:read", "content:read", "stories:read"],
+  DONOR:           ["requirement:read", "requirement:create", "stories:read", "initiative:read"],
 };
 
 export function requirePermission(permission: string) {
   return async (req: FastifyRequest, reply: FastifyReply) => {
     await authenticate(req, reply);
     if (reply.sent) return;
-
     const role = (req as any).role;
     const allowed = PERMISSIONS[role] ?? [];
     if (!allowed.includes(permission)) {

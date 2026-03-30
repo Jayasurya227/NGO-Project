@@ -19,61 +19,16 @@ function loadEnv() {
 }
 loadEnv();
 
-import { VertexAI } from "@google-cloud/vertexai";
 import { prisma } from "@ngo/database";
 
-function getVertexClient() {
-  return new VertexAI({
-    project: process.env.GCP_PROJECT ?? "inspire-education-489506",
-    location: process.env.GCP_LOCATION ?? "us-central1",
-  });
-}
-
 /**
- * Convert text to a 768-dimensional vector using Vertex AI text-embedding-004.
+ * Mock embedding generator for development when AI keys are not available.
+ * Returns a 3072-dimensional vector of small random numbers.
  */
 export async function embedText(text: string): Promise<number[]> {
-  const vertexAI = getVertexClient();
-  const model = vertexAI.getGenerativeModel({
-    model: process.env.GOOGLE_EMBEDDING_MODEL ?? "text-embedding-004",
-  });
-
-  // Use the predict endpoint for embeddings
-  const response = await fetch(
-    `https://${process.env.GCP_LOCATION ?? "us-central1"}-aiplatform.googleapis.com/v1/projects/${process.env.GCP_PROJECT ?? "inspire-education-489506"}/locations/${process.env.GCP_LOCATION ?? "us-central1"}/publishers/google/models/${process.env.GOOGLE_EMBEDDING_MODEL ?? "text-embedding-004"}:predict`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${await getAccessToken()}`,
-      },
-      body: JSON.stringify({
-        instances: [{ content: text.slice(0, 8000) }],
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Vertex AI embedding failed: ${response.status} ${error}`);
-  }
-
-  const data = await response.json() as {
-    predictions: Array<{ embeddings: { values: number[] } }>;
-  };
-
-  return data.predictions[0].embeddings.values;
-}
-
-async function getAccessToken(): Promise<string> {
-  const { GoogleAuth } = await import("google-auth-library");
-  const auth = new GoogleAuth({
-    scopes: ["https://www.googleapis.com/auth/cloud-platform"],
-  });
-  const client = await auth.getClient();
-  const token = await client.getAccessToken();
-  if (!token.token) throw new Error("Could not get access token");
-  return token.token;
+  console.log(`[MOCK] Generating mock embedding for text: ${text.slice(0, 50)}...`);
+  // DB expects 3072 dimensions for this project
+  return Array.from({ length: 3072 }, () => Math.random() * 0.1);
 }
 
 export function buildInitiativeEmbeddingText(initiative: {

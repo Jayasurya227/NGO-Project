@@ -37,7 +37,15 @@ export async function donationsRoutes(app: FastifyInstance) {
 
     const user = (req as any).user
     const item = await prisma.donation.create({
-      data: { ...parsed.data, tenantId: user.tenantId },
+      data: {
+        amount: parsed.data.amount,
+        paymentGateway: 'RAZORPAY',
+        gatewayPaymentId: `pay_${Math.random().toString(36).slice(2, 11)}`,
+        idempotencyKey: `idem_${Math.random().toString(36).slice(2, 11)}`,
+        status: 'PENDING',
+        donor: { connect: { id: parsed.data.donorId } },
+        tenant: { connect: { id: user.tenantId as string } },
+      },
     })
 
     return reply.status(201).send({ success: true, data: item })
