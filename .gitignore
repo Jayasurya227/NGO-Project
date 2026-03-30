@@ -7,3 +7,9 @@ dist/
 .vscode/
 .idea/
 coverage/
+
+.claude/
+apps/api-server/tmp/
+packages/database/*.js
+out-detailed.json
+schema.sql
