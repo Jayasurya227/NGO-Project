@@ -6,7 +6,8 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [pgcrypto, uuid_ossp(map: "uuid-ossp"), vector]
+  directUrl  = env("DIRECT_URL")
+  extensions = [uuid_ossp(map: "uuid-ossp"), vector, pgcrypto]
 }
 
 model Tenant {
@@ -412,6 +413,7 @@ model AgentJobLog {
   tenant       Tenant    @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId, agentName, status])
+
 }
 
 enum TenantStatus {

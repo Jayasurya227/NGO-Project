@@ -1,0 +1,83 @@
+{
+  "API_PORT": [
+    "apps\\api-server\\src\\server.ts"
+  ],
+  "JWT_SECRET": [
+    "apps\\api-server\\src\\middleware\\rbac.ts",
+    "apps\\api-server\\src\\routes\\auth.ts",
+    "apps\\api-server\\src\\ws\\plugin.ts"
+  ],
+  "NEXT_PUBLIC_API_URL": [
+    "apps\\web-admin\\app\\dashboard\\agents\\page.tsx",
+    "apps\\web-admin\\app\\login\\page.tsx",
+    "apps\\web-admin\\lib\\api.ts",
+    "apps\\web-admin\\lib\\auth.ts"
+  ],
+  "NEXT_PUBLIC_WS_URL": [],
+  "DATABASE_URL": [
+    "packages\\audit\\src\\__tests__\\audit.test.ts",
+    "packages\\database\\prisma\\schema.prisma",
+    "packages\\queue\\src\\load-env.ts",
+    "packages\\queue\\src\\workers\\initiative-matching.worker.ts"
+  ],
+  "REDIS_URL": [
+    "apps\\api-server\\src\\routes\\requirements.ts",
+    "apps\\api-server\\src\\ws\\plugin.ts",
+    "packages\\queue\\src\\load-env.ts",
+    "packages\\queue\\src\\queues.ts",
+    "packages\\queue\\src\\workers\\initiative-matching.worker.ts",
+    "packages\\queue\\src\\ws-emit.ts"
+  ],
+  "JWT_EXPIRES_IN": [],
+  "NODE_ENV": [
+    "packages\\audit\\src\\__tests__\\audit.test.ts",
+    "packages\\auth\\src\\encryption.ts",
+    "packages\\auth\\src\\__tests__\\encryption.test.ts",
+    "packages\\database\\src\\client.ts"
+  ],
+  "ENCRYPTION_KEY_HEX": [
+    "packages\\audit\\src\\__tests__\\audit.test.ts",
+    "packages\\auth\\src\\encryption.ts",
+    "packages\\auth\\src\\__tests__\\encryption.test.ts"
+  ],
+  "AZURE_OPENAI_API_KEY": [
+    "packages\\agents\\src\\utils\\test-openai.ts"
+  ],
+  "AZURE_OPENAI_ENDPOINT": [
+    "packages\\agents\\src\\utils\\test-openai.ts"
+  ],
+  "AZURE_OPENAI_DEPLOYMENT": [
+    "packages\\agents\\src\\utils\\test-openai.ts"
+  ],
+  "AZURE_OPENAI_API_VERSION": [
+    "packages\\agents\\src\\utils\\test-openai.ts"
+  ],
+  "GCP_PROJECT": [
+    "packages\\agents\\src\\gap-diagnoser\\index.ts",
+    "packages\\agents\\src\\matching\\index.ts",
+    "packages\\agents\\src\\requirements-analyst\\index.ts",
+    "packages\\agents\\src\\utils\\embeddings.ts",
+    "packages\\agents\\src\\utils\\test-gemini-embed.ts"
+  ],
+  "GCP_LOCATION": [
+    "packages\\agents\\src\\gap-diagnoser\\index.ts",
+    "packages\\agents\\src\\matching\\index.ts",
+    "packages\\agents\\src\\requirements-analyst\\index.ts",
+    "packages\\agents\\src\\utils\\embeddings.ts",
+    "packages\\agents\\src\\utils\\test-gemini-embed.ts"
+  ],
+  "GEMINI_MODEL": [
+    "packages\\agents\\src\\gap-diagnoser\\index.ts",
+    "packages\\agents\\src\\matching\\index.ts",
+    "packages\\agents\\src\\requirements-analyst\\index.ts"
+  ],
+  "GOOGLE_EMBEDDING_MODEL": [
+    "packages\\agents\\src\\utils\\embeddings.ts",
+    "packages\\agents\\src\\utils\\test-gemini-embed.ts"
+  ],
+  "EMBEDDING_DIMENSIONS": [],
+  "AWS_REGION": [],
+  "AWS_S3_BUCKET": [],
+  "ENCRYPTION_KEY_SECRET_ID": [],
+  "ALLOWED_ORIGINS": []
+}
