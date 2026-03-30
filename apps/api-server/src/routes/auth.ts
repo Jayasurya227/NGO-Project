@@ -10,6 +10,13 @@ const loginSchema = z.object({
   subdomain: z.string().min(1).optional().default("shiksha-foundation"),
 });
 
+const refreshSchema = z.object({
+  refreshToken: z.string().min(1),
+})
+
+// Simple in-memory refresh token store (replace with Redis in production)
+const refreshTokenStore = new Map<string, { userId: string; tenantId: string; role: string; expiresAt: number }>()
+
 export async function authRoutes(app: FastifyInstance) {
 
   // POST /login
