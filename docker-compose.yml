@@ -1,4 +1,4 @@
-﻿services:
+services:
   postgres:
     image: pgvector/pgvector:pg16
     environment:
@@ -6,7 +6,7 @@
       POSTGRES_PASSWORD: ngo_dev_pass
       POSTGRES_DB: ngo_platform
     ports:
-      - "5433:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 

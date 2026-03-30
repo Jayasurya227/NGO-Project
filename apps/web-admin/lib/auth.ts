@@ -1,4 +1,4 @@
-import Cookies from 'js-cookie'
+// js-cookie removed
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
 
@@ -11,7 +11,8 @@ export type AuthSession = {
 }
 
 export function getSession(): AuthSession | null {
-  const raw = Cookies.get('session')
+  if (typeof window === 'undefined') return null
+  const raw = localStorage.getItem('admin_session')
   if (!raw) return null
   try {
     return JSON.parse(raw) as AuthSession
@@ -21,11 +22,11 @@ export function getSession(): AuthSession | null {
 }
 
 export function saveSession(session: AuthSession) {
-  Cookies.set('session', JSON.stringify(session), { expires: 7 })
+  localStorage.setItem('admin_session', JSON.stringify(session))
 }
 
 export function clearSession() {
-  Cookies.remove('session')
+  localStorage.removeItem('admin_session')
 }
 
 export async function loginRequest(email: string, password: string) {

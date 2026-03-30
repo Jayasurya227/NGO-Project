@@ -1,25 +1,14 @@
-﻿import { readFileSync } from "fs";
-import { resolve } from "path";
-
-function loadEnv() {
-  try {
-    const content = readFileSync(resolve(process.cwd(), ".env"), "utf-8");
-    for (const line of content.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eqIndex = trimmed.indexOf("=");
-      if (eqIndex === -1) continue;
-      const key = trimmed.slice(0, eqIndex).trim();
-      const value = trimmed.slice(eqIndex + 1).trim();
-      if (key && !process.env[key]) process.env[key] = value;
-    }
-  } catch {}
-}
-loadEnv();
-
-import { FastifyInstance } from "fastify";
+import { FastifyInstance, FastifyRequest } from "fastify";
 import websocket from "@fastify/websocket";
 import { Redis } from "ioredis";
+import type { WebSocket } from "ws";
+
+declare module "fastify" {
+  interface RouteShorthandOptions {
+    websocket?: boolean;
+  }
+}
+
 
 // Map of tenantId → set of connected WebSocket clients
 const clients = new Map<string, Set<any>>();
@@ -54,20 +43,21 @@ function getSubscriber(): Redis {
 }
 
 export async function websocketPlugin(app: FastifyInstance) {
-  await app.register(websocket);
+  await app.register(websocket as any);
 
   // Initialize subscriber immediately
   getSubscriber();
 
   app.get(
     "/ws/notifications",
-    { websocket: true },
-    (socket, req) => {
+    { websocket: true } as any,
+    (connection: any, req: FastifyRequest) => {
+      const socket = connection.socket as any as WebSocket;
       // Extract tenant from JWT
       let tenantId: string | null = null;
 
       try {
-        const authHeader = req.headers.authorization ?? "";
+        const authHeader = (req.headers.authorization as string) ?? "";
         const token = authHeader.replace("Bearer ", "");
         if (token) {
           const jwt = require("jsonwebtoken");

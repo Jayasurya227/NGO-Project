@@ -5,7 +5,6 @@ import path from 'path'
 import fs from 'fs'
 
 export async function uploadRoutes(app: FastifyInstance) {
-  await app.register(multipart)
 
   const uploadDir = path.join(process.cwd(), 'uploads')
   if (!fs.existsSync(uploadDir)) {
@@ -13,7 +12,7 @@ export async function uploadRoutes(app: FastifyInstance) {
   }
 
   app.post('/api/upload', { preHandler: authenticate }, async (req, reply) => {
-    const data = await req.file()
+    const data = await (req as any).file()
 
     if (!data) {
       return reply.status(400).send({ success: false, error: 'No file uploaded' })

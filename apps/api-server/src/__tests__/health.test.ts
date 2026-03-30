@@ -1,4 +1,5 @@
-﻿import Fastify from 'fastify'
+import Fastify from 'fastify'
+import { describe, it, expect } from 'vitest'
 import { authRoutes } from '../routes/auth'
 
 async function buildApp() {

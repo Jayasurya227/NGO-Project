@@ -2,10 +2,10 @@ import { getSession } from './auth'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'
 
-export async function apiFetch(path: string, options: RequestInit = {}) {
+export async function apiFetch<T = any>(path: string, options: RequestInit = {}): Promise<T> {
   const session = getSession()
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string> ?? {}),
   }
 
@@ -13,9 +13,22 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
     headers['Authorization'] = `Bearer ${session.accessToken}`
   }
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers })
-  return res.json()
+  const url = `${API_URL}${path}`;
+  const res = await fetch(url, { ...options, headers })
+  console.log(`[API] ${path} yielded status ${res.status}`)
+  
+  if (!res.ok) {
+     const errBody = await res.json().catch(() => ({}));
+     console.error(`[API] ${path} error:`, errBody);
+     return { success: false, error: errBody } as any;
+  }
+
+  const json = await res.json()
+  console.log(`[API] ${path} JSON:`, json)
+  return json
+
 }
+
 
 export const api = {
   get:    (path: string) => apiFetch(path),

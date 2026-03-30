@@ -1,22 +1,3 @@
-import { readFileSync } from "fs";
-import { resolve } from "path";
-
-function loadEnv() {
-  try {
-    const content = readFileSync(resolve(process.cwd(), ".env"), "utf-8");
-    for (const line of content.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eqIndex = trimmed.indexOf("=");
-      if (eqIndex === -1) continue;
-      const key = trimmed.slice(0, eqIndex).trim();
-      const value = trimmed.slice(eqIndex + 1).trim();
-      if (key && !process.env[key]) process.env[key] = value;
-    }
-  } catch {}
-}
-loadEnv();
-
 import { FastifyInstance } from "fastify";
 import bcrypt from "bcryptjs";
 import { prisma } from "@ngo/database";
@@ -26,13 +7,20 @@ import * as jwt from "jsonwebtoken";
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
-  subdomain: z.string().min(1),
+  subdomain: z.string().min(1).optional().default("shiksha-foundation"),
 });
+
+const refreshSchema = z.object({
+  refreshToken: z.string().min(1),
+})
+
+// Simple in-memory refresh token store (replace with Redis in production)
+const refreshTokenStore = new Map<string, { userId: string; tenantId: string; role: string; expiresAt: number }>()
 
 export async function authRoutes(app: FastifyInstance) {
 
-  // POST /api/auth/login
-  app.post("/api/auth/login", async (req, reply) => {
+  // POST /login
+  app.post("/login", async (req, reply) => {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.status(400).send({
@@ -43,10 +31,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     const { email, password, subdomain } = parsed.data;
 
-    // Find tenant by subdomain
-    const tenant = await prisma.tenant.findUnique({
-      where: { subdomain },
-    });
+    const tenant = await prisma.tenant.findUnique({ where: { subdomain } });
     if (!tenant) {
       return reply.status(401).send({
         success: false,
@@ -54,7 +39,6 @@ export async function authRoutes(app: FastifyInstance) {
       });
     }
 
-    // Find user by plain email within tenant
     const user = await prisma.user.findFirst({
       where: { tenantId: tenant.id, email },
     });
@@ -89,6 +73,56 @@ export async function authRoutes(app: FastifyInstance) {
         tenantId: user.tenantId,
         userId: user.id,
       },
+    });
+  });
+
+  // POST /donor-login — separate from staff login
+  app.post("/donor-login", async (req, reply) => {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "Invalid request body" },
+      });
+    }
+
+    const { email, subdomain } = parsed.data;
+
+    const tenant = await prisma.tenant.findUnique({ where: { subdomain } });
+    if (!tenant) {
+      return reply.status(401).send({
+        success: false,
+        error: { code: "INVALID_CREDENTIALS", message: "Invalid credentials" },
+      });
+    }
+
+    // For donors: stub approach for Phase 2 scaffold
+    const donor = await prisma.donor.findFirst({
+      where: { tenantId: tenant.id },
+      select: { id: true },
+    });
+
+    if (!donor) {
+      return reply.status(401).send({
+        success: false,
+        error: { code: "INVALID_CREDENTIALS", message: "Donor not found for this tenant" },
+      });
+    }
+
+    // Issue a donor-scoped token
+    const accessToken = jwt.sign(
+      { userId: donor.id, tenantId: tenant.id, role: 'DONOR', donorId: donor.id },
+      process.env.JWT_SECRET ?? "dev_jwt_secret_change_in_production_must_be_64_chars_minimum_ok",
+      { expiresIn: '8h' }
+    );
+
+    return reply.send({
+      success: true,
+      data: {
+        accessToken,
+        donorId: donor.id,
+        tenantId: tenant.id,
+      }
     });
   });
 }

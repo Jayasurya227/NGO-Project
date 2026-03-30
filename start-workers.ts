@@ -13,13 +13,23 @@ function loadEnv() {
       if (eqIndex === -1) continue;
       const key = trimmed.slice(0, eqIndex).trim();
       const value = trimmed.slice(eqIndex + 1).trim();
-      if (key && !process.env[key]) process.env[key] = value;
+      if (key) {
+        process.env[key] = value;
+      }
     }
-  } catch {}
+    console.log(`[DEBUG] Loaded DATABASE_URL: ${process.env.DATABASE_URL?.split('@')[1]}`);
+    console.log(`[DEBUG] Loaded REDIS_URL: ${process.env.REDIS_URL}`);
+  } catch (e) {
+    console.error("Could not load .env:", e);
+  }
 }
 loadEnv();
 
-const tsxPath = join(process.cwd(), "apps", "api-server", "node_modules", ".bin", "tsx");
+const tsxPathRoot = join(process.cwd(), "node_modules", ".bin", "tsx.CMD");
+const tsxPathApp  = join(process.cwd(), "apps", "api-server", "node_modules", ".bin", "tsx.CMD");
+const tsxPath = require("fs").existsSync(tsxPathRoot) ? tsxPathRoot : tsxPathApp;
+
+console.log(`[DEBUG] Using tsx at: ${tsxPath}`);
 
 const workers = [
   {
@@ -33,6 +43,10 @@ const workers = [
   {
     name: "Initiative Embedding Worker",
     file: "packages/queue/src/workers/initiative-embedding.worker.ts",
+  },
+  {
+    name: "Initiative Matching Worker",
+    file: "packages/queue/src/workers/initiative-matching.worker.ts",
   },
 ];
 

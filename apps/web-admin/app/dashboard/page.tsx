@@ -10,11 +10,28 @@ export default function DashboardPage() {
   const [jobs, setJobs]                 = useState(0)
 
   useEffect(() => {
-    api.get('/api/donors').then(r => setDonors(r.meta?.total ?? 0))
-    api.get('/api/requirements').then(r => setRequirements(r.meta?.total ?? 0))
-    api.get('/api/initiatives').then(r => setInitiatives(r.meta?.total ?? 0))
-    api.get('/api/agents/jobs').then(r => setJobs(r.meta?.total ?? 0))
+    console.log('[DEBUG] DashboardPage: Starting data fetch...')
+    api.get('/api/donors').then(r => {
+      console.log('[DEBUG] /api/donors response:', r)
+      setDonors(r.meta?.total ?? 0)
+    }).catch(err => console.error('[DEBUG] /api/donors error:', err))
+
+    api.get('/api/requirements').then(r => {
+      console.log('[DEBUG] /api/requirements response:', r)
+      setRequirements(r.meta?.total ?? 0)
+    }).catch(err => console.error('[DEBUG] /api/requirements error:', err))
+
+    api.get('/api/initiatives').then(r => {
+      console.log('[DEBUG] /api/initiatives response:', r)
+      setInitiatives(r.meta?.total ?? 0)
+    }).catch(err => console.error('[DEBUG] /api/initiatives error:', err))
+
+    api.get('/api/agents/jobs').then(r => {
+      console.log('[DEBUG] /api/agents/jobs response:', r)
+      setJobs(r.meta?.total ?? 0)
+    }).catch(err => console.error('[DEBUG] /api/agents/jobs error:', err))
   }, [])
+
 
   const stats = [
     { label: 'Total donors',      value: donors,       icon: Users,     color: 'bg-blue-50 text-blue-700' },
