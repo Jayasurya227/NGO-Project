@@ -4,7 +4,7 @@ import { auditLog } from "@ngo/audit";
 import { queues, DEFAULT_JOB_OPTIONS } from "@ngo/queue";
 import { requirePermission } from "../middleware/rbac";
 import { z } from "zod";
-import { Redis } from "ioredis";
+
 
 const CreateRequirementBody = z.object({
   donorId:     z.string().uuid(),
@@ -16,10 +16,15 @@ const ValidateRequirementBody = z.object({
   corrections: z.record(z.unknown()).optional(),
 });
 
+const ApproveMatchesBody = z.object({
+  approvedMatchIds: z.array(z.string()).min(1).max(5),
+  reorderedRanks:   z.record(z.number()).optional(),
+});
+
 export async function requirementsRoutes(app: FastifyInstance) {
 
   // POST /api/requirements/upload
-  app.post("/api/requirements/upload", {
+  app.post("/upload", {
     preHandler: requirePermission("requirement:create"),
   }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
@@ -78,7 +83,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
   });
 
   // POST /api/requirements
-  app.post("/api/requirements", { preHandler: requirePermission("requirement:create") }, async (req, reply) => {
+  app.post("/", { preHandler: requirePermission("requirement:create") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const userId   = (req as any).userId;
 
@@ -114,7 +119,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
   });
 
   // GET /api/requirements
-  app.get("/api/requirements", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
+  app.get("/", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const page  = Number((req.query as any).page)  || 1;
     const limit = Number((req.query as any).limit) || 20;
@@ -134,7 +139,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
   });
 
   // GET /api/requirements/:id
-  app.get("/api/requirements/:id", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
+  app.get("/:id", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const { id }   = req.params as { id: string };
 
@@ -173,8 +178,8 @@ export async function requirementsRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /api/requirements/:id/validate
-  app.post("/api/requirements/:id/validate", { preHandler: requirePermission("requirement:update") }, async (req, reply) => {
+  // POST /api/requirements/:id/validate  ← FIXED: removed duplicate /api/requirements prefix
+  app.post("/:id/validate", { preHandler: requirePermission("requirement:update") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const userId   = (req as any).userId;
     const { id }   = req.params as { id: string };
@@ -202,8 +207,45 @@ export async function requirementsRoutes(app: FastifyInstance) {
     return reply.send({ success: true, data: { status: "VALIDATED", gapAnalysisQueued: true } });
   });
 
-  // POST /api/requirements/:id/pm-approve
-  app.post("/api/requirements/:id/pm-approve", { preHandler: requirePermission("requirement:update") }, async (req, reply) => {
+  // POST /api/requirements/:id/matches/approve  ← FIXED: removed duplicate prefix
+  app.post("/:id/matches/approve", { preHandler: requirePermission("requirement:update") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
+    const userId   = (req as any).userId;
+    const { id }   = req.params as { id: string };
+
+    const parsed = ApproveMatchesBody.safeParse(req.body);
+    if (!parsed.success) return reply.status(400).send({ success: false, error: { code: "VALIDATION_ERROR", message: "Invalid body", details: parsed.error.issues } });
+
+    const { approvedMatchIds, reorderedRanks } = parsed.data;
+
+    const requirement = await prisma.sponsorRequirement.findFirst({ where: { id, tenantId } });
+    if (!requirement) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Requirement not found" } });
+
+    // Apply any PM reordering
+    if (reorderedRanks) {
+      for (const [matchId, rank] of Object.entries(reorderedRanks)) {
+        await prisma.matchResult.updateMany({
+          where: { id: matchId, requirementId: id },
+          data:  { rank, humanOverride: "PM_REORDERED", humanOverrideBy: userId },
+        });
+      }
+    }
+
+    const job = await queues.pitchDeckGeneration.add(
+      "generate",
+      { requirementId: id, tenantId, approvedMatchIds },
+      DEFAULT_JOB_OPTIONS
+    );
+
+    await prisma.sponsorRequirement.update({ where: { id }, data: { status: "MATCHED" } });
+
+    await auditLog({ tenantId, eventType: "MATCHES_APPROVED", entityType: "SponsorRequirement", entityId: id, actorId: userId, actorType: "USER", afterState: { approvedMatchIds, status: "MATCHED" } });
+
+    return reply.status(202).send({ success: true, data: { jobId: job.id!, status: "QUEUED", estimatedCompletionSeconds: 90 } });
+  });
+
+  // POST /api/requirements/:id/pm-approve  ← FIXED: removed duplicate prefix
+  app.post("/:id/pm-approve", { preHandler: requirePermission("requirement:update") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const userId   = (req as any).userId;
     const { id }   = req.params as { id: string };
@@ -215,7 +257,6 @@ export async function requirementsRoutes(app: FastifyInstance) {
       return reply.status(400).send({ success: false, error: { code: "INVALID_STATE", message: `PM approval requires MATCHED status. Current: ${requirement.status}` } });
     }
 
-    // Get approved match IDs
     const approvedMatches = await prisma.matchResult.findMany({
       where:   { requirementId: id },
       select:  { id: true },
@@ -225,31 +266,24 @@ export async function requirementsRoutes(app: FastifyInstance) {
 
     const approvedMatchIds = approvedMatches.map(m => m.id);
 
-    // Queue pitch deck generation
     await queues.pitchDeckGeneration.add(
       "generate",
       { requirementId: id, tenantId, approvedMatchIds },
       DEFAULT_JOB_OPTIONS
     );
 
-    // Update status to PM_APPROVED
-    await prisma.sponsorRequirement.update({
-      where: { id },
-      data:  { status: "MATCHED" },
-    });
+    await prisma.sponsorRequirement.update({ where: { id }, data: { status: "PM_APPROVED" } });
 
     await auditLog({ tenantId, eventType: "PM_APPROVED", entityType: "SponsorRequirement", entityId: id, actorId: userId, actorType: "USER", beforeState: { status: requirement.status }, afterState: { status: "PM_APPROVED", pitchDeckQueued: true } });
 
-    // Publish WS event
-    const pub = new Redis(process.env.REDIS_URL!, { maxRetriesPerRequest: null });
-    await pub.publish(`ws:${tenantId}`, JSON.stringify({ type: "PM_APPROVED", requirementId: id }));
-    await pub.quit();
+    const { connection } = await import("@ngo/queue");
+    await connection.publish(`ws:${tenantId}`, JSON.stringify({ type: "PM_APPROVED", requirementId: id }));
 
-    return reply.send({ success: true, data: { status: "PM_APPROVED", pitchDeckQueued: true, approvedMatchIds, message: "PM approved. Pitch deck generation started." } });
+    return reply.send({ success: true, data: { status: "PM_APPROVED", pitchDeckQueued: true, approvedMatchIds } });
   });
 
-  // GET /api/requirements/:id/matches
-  app.get("/api/requirements/:id/matches", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
+  // GET /api/requirements/:id/matches  ← FIXED: removed duplicate prefix
+  app.get("/:id/matches", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const { id }   = req.params as { id: string };
 
@@ -258,10 +292,26 @@ export async function requirementsRoutes(app: FastifyInstance) {
 
     const matches = await prisma.matchResult.findMany({
       where: { requirementId: id },
-      include: { initiative: { select: { id: true, title: true, sector: true, geography: true, description: true, budgetRequired: true, budgetFunded: true, targetBeneficiaries: true, sdgTags: true } } },
+      include: {
+        initiative: {
+          select: {
+            id: true, title: true, sector: true, geography: true,
+            description: true, budgetRequired: true, budgetFunded: true,
+            targetBeneficiaries: true, sdgTags: true,
+          },
+        },
+      },
       orderBy: { rank: "asc" },
     });
 
-    return reply.send({ success: true, data: { requirementStatus: req2.status, matches, canApprove: req2.status === "MATCHED" } });
+    return reply.send({
+      success: true,
+      data: {
+        requirementStatus: req2.status,
+        requirementFields: req2.extractedFields,
+        matches,
+        canApprove: ["VALIDATED", "MATCHED"].includes(req2.status),
+      },
+    });
   });
 }

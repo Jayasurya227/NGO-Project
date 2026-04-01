@@ -30,12 +30,13 @@ export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
 
 // Role permission map
 const PERMISSIONS: Record<string, string[]> = {
-  NGO_ADMIN:       ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read"],
-  PROGRAM_MANAGER: ["donor:read", "requirement:read", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read"],
-  DRM: ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read"],
+  NGO_ADMIN:       ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read", "content:read", "content:approve"],
+  PROGRAM_MANAGER: ["donor:read", "requirement:read", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read", "content:read", "content:approve"],
+  DRM:             ["donor:read", "donor:create", "donor:update", "requirement:read", "requirement:create", "requirement:update", "initiative:read", "initiative:create", "initiative:update", "agent:read", "content:read", "content:approve"],
   FIELD_WORKER:    ["initiative:read"],
   FINANCE_OFFICER: ["donor:read", "requirement:read"],
   AUDITOR:         ["donor:read", "requirement:read", "initiative:read", "agent:read"],
+  DONOR:           ["requirement:create", "requirement:read", "initiative:read", "content:read"],
 };
 
 export function requirePermission(permission: string) {
