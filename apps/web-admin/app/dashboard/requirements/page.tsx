@@ -157,13 +157,22 @@ export default function RequirementsPage() {
                     onClick={() => router.push(`/dashboard/requirements/${req.id}`)}
                     className={`transition-colors cursor-pointer ${needsAction ? 'hover:bg-orange-50 bg-orange-50/30' : 'hover:bg-gray-50'}`}>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-900">{(req.extractedFields as any)?.companyName || req.donor?.orgName || 'Unknown'}</p>
-
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {req.rawDocumentUrl
-                          ? `📄 ${req.rawDocumentUrl.replace('uploaded:', '')}`
-                          : 'Manual form'}
-                      </p>
+                      {(req.extractedFields as any)?.companyName ? (
+                        <div>
+                          <p className="font-semibold text-gray-900">{(req.extractedFields as any).companyName}</p>
+                          <p className="text-[10px] text-green-600 font-medium">✓ Extracted from document</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="font-semibold text-gray-700">{req.donor?.orgName || 'Unknown'}</p>
+                          <p className="text-[10px] text-amber-600 font-medium">⚠ Not extracted — donor account name</p>
+                        </div>
+                      )}
+                      {req.rawDocumentUrl && (
+                        <p className="text-[10px] text-gray-400 mt-0.5 font-mono">
+                          📄 {req.rawDocumentUrl.replace('uploaded:', '')}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`text-xs font-semibold inline-flex items-center gap-1 px-2 py-1 rounded-md border ${
@@ -206,7 +215,7 @@ export default function RequirementsPage() {
                       )}
                       {req.status === 'NEEDS_REVIEW' && (
                         <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
-                          ⚠ Low Confidence — Fix
+                          ⚠ Click row → Fill correction form
                         </span>
                       )}
                       {req.status === 'PENDING_EXTRACTION' && (

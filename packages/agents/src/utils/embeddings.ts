@@ -2,33 +2,51 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 
 function loadEnv() {
-  try {
-    const content = readFileSync(resolve(process.cwd(), ".env"), "utf-8");
-    for (const line of content.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eqIndex = trimmed.indexOf("=");
-      if (eqIndex === -1) continue;
-      const key = trimmed.slice(0, eqIndex).trim();
-      const value = trimmed.slice(eqIndex + 1).trim();
-      if (key && !process.env[key]) process.env[key] = value;
-    }
-  } catch (e) {
-    console.error("Could not load .env:", e);
+  const candidates = [
+    resolve(process.cwd(), ".env"),
+    resolve(process.cwd(), "../../.env"),
+    resolve(process.cwd(), "../../../.env"),
+  ];
+  for (const envPath of candidates) {
+    try {
+      const content = readFileSync(envPath, "utf-8");
+      for (const line of content.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIndex = trimmed.indexOf("=");
+        if (eqIndex === -1) continue;
+        const key = trimmed.slice(0, eqIndex).trim();
+        const value = trimmed.slice(eqIndex + 1).trim();
+        if (key) process.env[key] = value;
+      }
+      break;
+    } catch {}
   }
 }
 loadEnv();
 
 import { prisma } from "@ngo/database";
 
-/**
- * Mock embedding generator for development when AI keys are not available.
- * Returns a 3072-dimensional vector of small random numbers.
- */
 export async function embedText(text: string): Promise<number[]> {
-  console.log(`[MOCK] Generating mock embedding for text: ${text.slice(0, 50)}...`);
-  // DB expects 3072 dimensions for this project
-  return Array.from({ length: 3072 }, () => Math.random() * 0.1);
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set — cannot generate embeddings");
+
+  const model = process.env.GOOGLE_EMBEDDING_MODEL ?? "gemini-embedding-001";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${apiKey}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: `models/${model}`, content: { parts: [{ text }] } }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Embedding API error ${res.status}: ${err}`);
+  }
+
+  const data = await res.json() as { embedding: { values: number[] } };
+  return data.embedding.values;
 }
 
 export function buildInitiativeEmbeddingText(initiative: {
@@ -67,7 +85,5 @@ export async function embedAndSaveInitiative(initiativeId: string): Promise<void
   const vector = await embedText(text);
   const vectorString = `[${vector.join(",")}]`;
 
-  await prisma.$executeRawUnsafe(
-    `UPDATE "Initiative" SET "embeddingVector" = '${vectorString}'::vector WHERE id = '${initiativeId}'`
-  );
+  await prisma.$executeRaw`UPDATE "Initiative" SET "embeddingVector" = ${vectorString}::vector WHERE id::text = ${initiativeId}`;
 }

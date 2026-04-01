@@ -2,6 +2,9 @@
   "name": "ngo-impact-platform",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "workers": "tsx packages/queue/src/start-all-workers.ts"
+  },
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/multipart": "^9.4.0",

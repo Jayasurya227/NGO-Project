@@ -2,22 +2,30 @@ import { readFileSync } from "fs";
 import { resolve } from "path";
 
 function loadEnv() {
-  try {
-    const content = readFileSync(resolve(process.cwd(), ".env"), "utf-8");
-    for (const line of content.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eqIndex = trimmed.indexOf("=");
-      if (eqIndex === -1) continue;
-      const key = trimmed.slice(0, eqIndex).trim();
-      const value = trimmed.slice(eqIndex + 1).trim();
-      if (key && !process.env[key]) process.env[key] = value;
-    }
-  } catch {}
+  const candidates = [
+    resolve(process.cwd(), ".env"),
+    resolve(process.cwd(), "../../.env"),
+    resolve(process.cwd(), "../../../.env"),
+  ];
+  for (const envPath of candidates) {
+    try {
+      const content = readFileSync(envPath, "utf-8");
+      for (const line of content.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIndex = trimmed.indexOf("=");
+        if (eqIndex === -1) continue;
+        const key = trimmed.slice(0, eqIndex).trim();
+        const value = trimmed.slice(eqIndex + 1).trim();
+        if (key) process.env[key] = value;
+      }
+      break;
+    } catch {}
+  }
 }
 loadEnv();
 
-import { VertexAI } from "@google-cloud/vertexai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { prisma } from "@ngo/database";
 import { auditLog } from "@ngo/audit";
 import type { ExtractionResult } from "../requirements-analyst/schema";
@@ -36,11 +44,10 @@ type GapItem = {
   severity: "CRITICAL" | "MINOR";
 };
 
-function getVertexClient() {
-  return new VertexAI({
-    project: process.env.GCP_PROJECT ?? "inspire-education-489506",
-    location: process.env.GCP_LOCATION ?? "us-central1",
-  });
+function getGeminiClient() {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+  return new GoogleGenerativeAI(apiKey);
 }
 
 export async function runGapDiagnoser(params: {
@@ -130,9 +137,9 @@ export async function runGapDiagnoser(params: {
      narrative = `MOCK ANALYSIS: Based on the requirement for a ${fields.sector} initiative in ${fields.geography.state ?? "various locations"}, we have identified ${criticalGaps.length} critical gaps. We recommend that you ${recommendation.replace(/_/g, " ").toLowerCase()} to address these needs effectively within the current infrastructure.`;
   } else {
     try {
-      const vertexAI = getVertexClient();
-      const model = vertexAI.getGenerativeModel({
-        model: process.env.GEMINI_MODEL ?? "gemini-2.0-flash-001",
+      const genAI = getGeminiClient();
+      const model = genAI.getGenerativeModel({
+        model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
         generationConfig: { temperature: 0.3, maxOutputTokens: 200 },
       });
 
@@ -148,7 +155,7 @@ Minor gaps: ${minorGaps.map((g) => g.description).join("; ") || "None"}.
 Recommendation: ${recommendation.replace(/_/g, " ").toLowerCase()}.`;
 
       const narrativeResult = await model.generateContent(narrativePrompt);
-      narrative = narrativeResult.response.candidates?.[0]?.content?.parts?.[0]?.text
+      narrative = narrativeResult.response.text()
         ?? "Gap analysis summary generated with empty content.";
     } catch (err) {
       console.error("[gap-diagnoser] Narrative generation failed:", err);

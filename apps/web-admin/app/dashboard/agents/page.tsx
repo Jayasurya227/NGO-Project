@@ -7,10 +7,9 @@ type Mode = 'manual' | 'upload'
 
 function getToken(): string {
   try {
-    const raw = document.cookie.split(';').find(c => c.trim().startsWith('session='))?.split('=').slice(1).join('=')
+    const raw = localStorage.getItem('admin_session')
     if (!raw) return ''
-    const session = JSON.parse(decodeURIComponent(raw))
-    return session?.accessToken ?? ''
+    return JSON.parse(raw)?.accessToken ?? ''
   } catch { return '' }
 }
 
@@ -500,23 +499,15 @@ export default function AgentsPage() {
     setSubmitting(true); setResult(null)
     try {
       if (mode === 'upload' && file) {
-        // NGO upload → read file text → create initiative directly (Type: NGO → goes to NGO Initiatives dashboard)
-        const fileText = await new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onload  = (e) => resolve(e.target?.result as string ?? '')
-          reader.onerror = () => resolve('')
-          reader.readAsText(file)
-        })
-
-        const res = await api.post('/api/initiatives', {
-          title: data.initiativeTitle || file.name.replace(/\.[^.]+$/, ''),
-          sector: 'EDUCATION',
-          geography: { state: 'India', lat: 0, lng: 0 },
-          description: fileText.slice(0, 2000) || `Uploaded from: ${file.name}`,
-          targetBeneficiaries: 100,
-          budgetRequired: 1000000,
-          sdgTags: ['SDG4'],
-        })
+        // NGO upload → send file to server, AI extracts all fields
+        const formData = new FormData()
+        formData.append('file', file)
+        const token = getToken()
+        const uploadRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'}/api/initiatives/upload`,
+          { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData }
+        )
+        const res = await uploadRes.json()
 
         if (!res.success) {
           setResult({ success: false, message: res.error?.message ?? 'Failed to create NGO initiative from document' })

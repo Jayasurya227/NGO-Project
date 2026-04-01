@@ -18,7 +18,7 @@ loadEnv();
 import { runGapDiagnoser } from "./packages/agents/src/gap-diagnoser/index";
 import { prisma } from "@ngo/database";
 
-const REQ_ID = "371681b6-a6cc-453b-9db1-0963d203edea";
+const REQ_ID = "4eac03ce-4aa3-41ef-8f96-680bd7f4e21e";
 
 async function main() {
   const tenant = await prisma.tenant.findFirst({

@@ -6,7 +6,7 @@
     ".": "./src/queues.ts",
     "./ws-emit": "./src/ws-emit.ts"
   },
-  "scripts": { "build": "tsc" },
+  "scripts": { "build": "tsc", "workers": "tsx src/start-all-workers.ts" },
   "dependencies": {
     "@ngo/database": "workspace:*",
     "@ngo/types": "workspace:*",

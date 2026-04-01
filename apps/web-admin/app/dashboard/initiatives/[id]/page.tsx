@@ -42,6 +42,11 @@ export default function InitiativeDetailPage() {
     queryFn:  () => apiFetch<{ data: any }>(`/api/initiatives/${id}`),
   });
 
+  const { data: matchesData } = useQuery({
+    queryKey: ['initiative-matches', id],
+    queryFn:  () => apiFetch<{ data: any[] }>(`/api/initiatives/${id}/matches`),
+  });
+
   const updateStatusMutation = useMutation({
     mutationFn: (status: string) => apiFetch(`/api/initiatives/${id}/status`, {
       method: 'POST',
@@ -135,6 +140,77 @@ export default function InitiativeDetailPage() {
           color="purple"
         />
       </div>
+
+      {/* Matched CSR Donors */}
+      {(() => {
+        const matched = matchesData?.data ?? []
+        return (
+          <div className="mb-10">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4 mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">Matched CSR Donors</h2>
+                <p className="text-xs text-slate-400 mt-0.5">CSR requirements the AI matched to this initiative</p>
+              </div>
+              <span className="text-xs font-bold px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded-full">
+                {matched.length} match{matched.length !== 1 ? 'es' : ''}
+              </span>
+            </div>
+
+            {matched.length === 0 ? (
+              <div className="py-10 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl text-center text-slate-400 text-sm">
+                No CSR matches yet. Matches appear after a CSR uploads a requirement and the AI runs matching.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {matched.map((m: any) => {
+                  const ef = m.requirement?.extractedFields as any
+                  const donor = m.requirement?.donor
+                  const score = m.overallScore as number
+                  const scoreColour = score >= 75 ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                    : score >= 50 ? 'bg-amber-100 text-amber-800 border-amber-200'
+                    : 'bg-red-100 text-red-800 border-red-200'
+                  return (
+                    <div key={m.id} className="bg-white border border-slate-200 rounded-xl px-5 py-4 flex items-center gap-4 hover:border-blue-200 transition-colors">
+                      {/* Score circle */}
+                      <div className={`w-12 h-12 rounded-full border-2 flex flex-col items-center justify-center flex-shrink-0 ${scoreColour}`}>
+                        <span className="text-base font-bold leading-none">{score}</span>
+                        <span className="text-[9px] opacity-60 leading-none">/ 100</span>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-900">
+                          {donor?.orgName ?? ef?.companyName ?? 'Unknown Donor'}
+                          <span className="ml-2 text-[10px] font-medium text-slate-400 uppercase">{donor?.type}</span>
+                        </p>
+                        <div className="flex gap-3 text-xs text-slate-400 mt-0.5 flex-wrap">
+                          {ef?.sector && <span>📂 {ef.sector.replace(/_/g, ' ')}</span>}
+                          {ef?.budget?.maxInr && <span>💰 up to ₹{(ef.budget.maxInr / 100000).toFixed(0)}L</span>}
+                          {ef?.geography?.state && <span>📍 {ef.geography.state}</span>}
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            m.requirement?.status === 'MATCHED' ? 'bg-purple-100 text-purple-700' :
+                            m.requirement?.status === 'VALIDATED' ? 'bg-green-100 text-green-700' :
+                            'bg-gray-100 text-gray-600'
+                          }`}>{m.requirement?.status?.replace(/_/g, ' ')}</span>
+                        </div>
+                        {m.explanation && (
+                          <p className="text-xs text-slate-500 italic mt-1 line-clamp-1">{m.explanation}</p>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => router.push(`/dashboard/requirements/${m.requirement?.id}/matches`)}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium border border-blue-200 px-3 py-1.5 rounded-lg flex-shrink-0"
+                      >
+                        View Match →
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Milestones Section */}
       <div className="space-y-6">

@@ -1,4 +1,4 @@
-import { VertexAI } from '@google-cloud/vertexai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { prisma } from '@ngo/database';
 import { auditLog } from '@ngo/audit';
 import {
@@ -136,12 +136,10 @@ async function scoreCandidates(candidateIds: string[], fields: any): Promise<Mat
 
 // ── STEP 5: EXPLAIN TOP 5 ─────────────────────────────────────────────────────
 async function explainMatches(candidates: MatchCandidate[], fields: any): Promise<MatchCandidate[]> {
-  const vertexAI = new VertexAI({
-    project:  process.env.GCP_PROJECT!,
-    location: process.env.GCP_LOCATION ?? 'us-central1',
-  });
-  const model = vertexAI.getGenerativeModel({
-    model: process.env.GEMINI_MODEL ?? 'gemini-2.0-flash-001',
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+  const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({
+    model: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
   });
 
   const explained = [...candidates];
@@ -160,7 +158,7 @@ Geography score: ${match.subScores.geography}/100
 Budget score: ${match.subScores.budget}/100`;
 
       const result = await model.generateContent(prompt);
-      const text   = result.response.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? '';
+      const text   = result.response.text()?.trim() ?? '';
       explained[i] = { ...match, explanation: text || `Score ${match.overallScore}/100 match.` };
       console.log(`[matching-agent] Explanation generated for: ${match.title}`);
     } catch (err) {
