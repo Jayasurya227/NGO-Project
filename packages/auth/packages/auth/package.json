@@ -1,0 +1,14 @@
+{
+  "name": "@ngo/auth",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "scripts": { "build": "tsc", "test": "vitest" },
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.500.0",
+    "argon2": "^0.31.2"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.0",
+    "dotenv": "^16.0.0"
+  }
+}

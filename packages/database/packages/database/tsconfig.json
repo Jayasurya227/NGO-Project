@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "paths": {
+      "@ngo/auth/encryption": ["../auth/src/encryption.ts"],
+      "@ngo/auth": ["../auth/src/index.ts"],
+      "@ngo/database": ["./src/client.ts"],
+      "@ngo/queue": ["../queue/src/queues.ts"]
+    }
+  },
+  "include": ["src/**/*", "prisma/**/*"]
+}

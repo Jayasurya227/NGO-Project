@@ -1,8 +1,3 @@
-// Set env vars before any imports
-process.env.NODE_ENV = "development";
-process.env.ENCRYPTION_KEY_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-process.env.DATABASE_URL = "postgresql://ngo:ngo_dev_pass@localhost:5433/ngo_platform";
-
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { auditLog, verifyAuditChain } from "../index";
 import { prisma } from "@ngo/database";
@@ -53,11 +48,16 @@ describe("Audit chain", () => {
       where: { tenantId: TEST_TENANT },
       orderBy: { timestamp: "asc" },
     });
+
     expect(events.length).toBeGreaterThan(0);
+
+    const firstEvent = events[0];
+
     const brokenEvents = [
-      { ...events[0], currentHash: "tampered_hash_value" },
+      { ...firstEvent, currentHash: "tampered_hash_value" },
       ...events.slice(1),
     ];
+
     const result = await verifyAuditChain(TEST_TENANT, brokenEvents);
     expect(result.valid).toBe(false);
     expect(result.brokenAt).toBeDefined();

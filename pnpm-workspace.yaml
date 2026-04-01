@@ -1,5 +1,10 @@
 packages:
-  - 'packages/*'
-  - 'apps/*'
+  - "apps/*"
+  - "packages/*"
 allowBuilds:
-  bcrypt: false
+  '@prisma/client': false
+  '@prisma/engines': false
+  argon2: false
+  msgpackr-extract: false
+  prisma: false
+  sharp: false

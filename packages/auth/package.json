@@ -6,12 +6,13 @@
     ".": "./src/index.ts",
     "./encryption": "./src/encryption.ts"
   },
-  "scripts": { "build": "tsc", "test": "vitest run" },
+  "scripts": { "build": "tsc", "test": "vitest" },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.500.0",
-    "dotenv": "^16.0.0"
+    "argon2": "^0.31.2"
   },
   "devDependencies": {
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "dotenv": "^16.0.0"
   }
 }

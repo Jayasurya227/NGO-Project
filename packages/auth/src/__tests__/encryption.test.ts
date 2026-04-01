@@ -1,9 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { encrypt, decrypt, hashForLookup } from "../encryption";
 
-process.env.NODE_ENV = "development";
-process.env.ENCRYPTION_KEY_HEX = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
 describe("Encryption", () => {
   it("encrypts and decrypts correctly", async () => {
     const original = "Ramesh Kumar";

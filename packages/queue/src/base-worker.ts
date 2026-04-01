@@ -1,5 +1,7 @@
 import "./load-env";
-
+import { config } from "dotenv";
+import { resolve } from "path";
+config({ path: resolve(process.cwd(), ".env") });
 import { Worker, Job } from "bullmq";
 import { connection } from "./queues";
 import { prisma } from "@ngo/database";
@@ -45,7 +47,7 @@ export abstract class BaseAgentWorker<T extends { tenantId: string }> {
         }
       },
       {
-        connection: connection as any,
+        connection,
         concurrency: this.concurrency,
         limiter: {
           max: 20,
@@ -55,7 +57,7 @@ export abstract class BaseAgentWorker<T extends { tenantId: string }> {
     );
 
     worker.on("error", (err) => console.error(`[${this.agentName}] Worker error:`, err));
-    worker.on("failed", (job, err) => console.error(`[${this.agentName}] Job failed:`, job?.id, err.message));
+    worker.on("failed", (job, err) => console.error(`[${this.agentName}] Job failed:`, job?.id, err.message, err.stack));
     worker.on("completed", (job) => console.log(`[${this.agentName}] Job completed:`, job.id));
 
     console.log(`Worker started: ${this.agentName} (queue: ${this.queueName})`);
@@ -79,8 +81,8 @@ export abstract class BaseAgentWorker<T extends { tenantId: string }> {
             status === "COMPLETED" || status === "FAILED" ? new Date() : null,
         },
       });
-    } catch (err: any) {
-      console.error(`[${ctx.agentName}] Failed to update job status in DB: ${err.message}`);
+    } catch {
+      console.error(`[${ctx.agentName}] Failed to update job status in DB`);
     }
   }
 }

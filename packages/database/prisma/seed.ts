@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { encrypt, hashForLookup } from "@ngo/auth/encryption";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -27,8 +28,8 @@ async function main() {
       id: "seed-user-admin-a",
       tenantId: tenantA.id,
       email: "admin@shiksha.test",
-      emailHash: "admin-hash",
-      fullNameEnc: Buffer.from("Priya Sharma"),
+      emailHash: hashForLookup("admin@shiksha.test"),
+      fullNameEnc: await encrypt("Priya Sharma"),
       passwordHash,
       role: "NGO_ADMIN",
       status: "ACTIVE",
@@ -42,8 +43,8 @@ async function main() {
       id: "seed-user-drm-a",
       tenantId: tenantA.id,
       email: "drm@shiksha.test",
-      emailHash: "drm-hash",
-      fullNameEnc: Buffer.from("Vikram Nair"),
+      emailHash: hashForLookup("drm@shiksha.test"),
+      fullNameEnc: await encrypt("Vikram Nair"),
       passwordHash,
       role: "DRM",
       status: "ACTIVE",
@@ -157,23 +158,23 @@ async function main() {
   ];
 
   for (const init of initiativesToSeed) {
-    await prisma.initiative.upsert({
-      where: { id: init.id },
-      update: {},
-      create: {
-        id: init.id,
-        title: init.title,
-        sector: init.sector as any,
-        geography: init.geography as any,
-        description: init.description,
-        targetBeneficiaries: init.targetBeneficiaries,
-        budgetRequired: init.budgetRequired,
-        sdgTags: init.sdgTags,
-        status: "ACTIVE",
-        tenant: { connect: { id: tenantA.id } },
-      },
-    });
-  }
+  await prisma.initiative.upsert({
+    where: { id: init.id },
+    update: {},
+    create: {
+      id: init.id,
+      title: init.title,
+      sector: init.sector as any,
+      geography: init.geography as any,
+      description: init.description,
+      targetBeneficiaries: init.targetBeneficiaries,
+      budgetRequired: init.budgetRequired,
+      sdgTags: init.sdgTags,
+      status: "ACTIVE",
+      tenant: { connect: { id: tenantA.id } },
+    },
+  });
+}
 
   console.log("Seeded " + (initiativesToSeed.length + 1) + " initiatives");
   console.log("Seed complete. Test credentials:");

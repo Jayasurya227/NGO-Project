@@ -1,34 +1,19 @@
-import { readFileSync } from "fs";
-import { resolve } from "path";
-
-function loadEnv() {
-  try {
-    const content = readFileSync(resolve(process.cwd(), ".env"), "utf-8");
-    for (const line of content.split(/\r?\n/)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) continue;
-      const eqIndex = trimmed.indexOf("=");
-      if (eqIndex === -1) continue;
-      const key = trimmed.slice(0, eqIndex).trim();
-      const value = trimmed.slice(eqIndex + 1).trim();
-      if (key && !process.env[key]) process.env[key] = value;
-    }
-  } catch (e) {
-    console.error("Could not load .env:", e);
-  }
-}
-loadEnv();
-
+import OpenAI from "openai";
 import { prisma } from "@ngo/database";
 
-/**
- * Mock embedding generator for development when AI keys are not available.
- * Returns a 3072-dimensional vector of small random numbers.
- */
+const client = new OpenAI({
+  apiKey: process.env.AZURE_OPENAI_API_KEY,
+  baseURL: `${process.env.AZURE_OPENAI_ENDPOINT}openai/deployments/${process.env.AZURE_OPENAI_DEPLOYMENT}`,
+  defaultHeaders: { "api-key": process.env.AZURE_OPENAI_API_KEY },
+  defaultQuery: { "api-version": process.env.AZURE_OPENAI_API_VERSION },
+});
+
 export async function embedText(text: string): Promise<number[]> {
-  console.log(`[MOCK] Generating mock embedding for text: ${text.slice(0, 50)}...`);
-  // DB expects 3072 dimensions for this project
-  return Array.from({ length: 3072 }, () => Math.random() * 0.1);
+  const response = await client.embeddings.create({
+    model: process.env.AZURE_OPENAI_DEPLOYMENT ?? "text-embedding-3-large",
+    input: text.slice(0, 8000),
+  });
+  return response.data[0].embedding;
 }
 
 export function buildInitiativeEmbeddingText(initiative: {
@@ -65,9 +50,9 @@ export async function embedAndSaveInitiative(initiativeId: string): Promise<void
   });
 
   const vector = await embedText(text);
-  const vectorString = `[${vector.join(",")}]`;
 
-  await prisma.$executeRawUnsafe(
-    `UPDATE "Initiative" SET "embeddingVector" = '${vectorString}'::vector WHERE id = '${initiativeId}'`
-  );
+ const vectorString = `[${vector.join(",")}]`;
+await prisma.$executeRawUnsafe(
+  `UPDATE "Initiative" SET "embeddingVector" = '${vectorString}'::vector WHERE id = '${initiativeId}'`
+);
 }

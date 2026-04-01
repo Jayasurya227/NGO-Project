@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes, createHash } from "crypto";
+import { SecretsManagerClient, GetSecretValueCommand } from "@aws-sdk/client-secrets-manager";
 
 const ALG = "aes-256-gcm";
 let _cachedKey: Buffer | null = null;
@@ -7,14 +8,20 @@ export function resetCachedKey() { _cachedKey = null; }
 
 async function getEncryptionKey(): Promise<Buffer> {
   if (_cachedKey) return _cachedKey;
+
   if (process.env.NODE_ENV === "development" && process.env.ENCRYPTION_KEY_HEX) {
     _cachedKey = Buffer.from(process.env.ENCRYPTION_KEY_HEX, "hex");
     if (_cachedKey.length !== 32) {
-      throw new Error("ENCRYPTION_KEY_HEX must be exactly 64 hex characters");
+      throw new Error("ENCRYPTION_KEY_HEX must be exactly 64 hex characters (32 bytes)");
     }
     return _cachedKey;
   }
-  throw new Error("ENCRYPTION_KEY_HEX not set in environment");
+
+  const client = new SecretsManagerClient({ region: "ap-south-1" });
+  const command = new GetSecretValueCommand({ SecretId: process.env.ENCRYPTION_KEY_SECRET_ID! });
+  const result = await client.send(command);
+  _cachedKey = Buffer.from(result.SecretString!, "hex");
+  return _cachedKey;
 }
 
 export async function encrypt(plaintext: string): Promise<Buffer> {
@@ -28,9 +35,9 @@ export async function encrypt(plaintext: string): Promise<Buffer> {
 
 export async function decrypt(buf: Buffer): Promise<string> {
   const key = await getEncryptionKey();
-  const iv = buf.slice(0, 12);
+  const iv  = buf.slice(0, 12);
   const tag = buf.slice(12, 28);
-  const ct = buf.slice(28);
+  const ct  = buf.slice(28);
   const decipher = createDecipheriv(ALG, key, iv);
   decipher.setAuthTag(tag);
   return decipher.update(ct).toString("utf8") + decipher.final("utf8");

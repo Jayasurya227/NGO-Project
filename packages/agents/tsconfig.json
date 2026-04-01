@@ -7,7 +7,12 @@
     "strict": false,
     "skipLibCheck": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "paths": {
+      "@ngo/database": ["../database/src/client.ts"],
+      "@ngo/auth": ["../auth/src/index.ts"],
+      "@ngo/auth/encryption": ["../auth/src/encryption.ts"],
+      "@ngo/types": ["../types/src/index.ts"]
+    }
   },
   "include": ["src/**/*"]
 }

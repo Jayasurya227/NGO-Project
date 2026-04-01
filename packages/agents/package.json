@@ -4,33 +4,20 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./utils/embeddings": "./src/utils/embeddings.ts",
-    "./requirements-analyst": "./src/requirements-analyst/index.ts",
-    "./gap-diagnoser": "./src/gap-diagnoser/index.ts",
-    "./matching": "./src/matching/index.ts",
-    "./pitch-deck": "./src/pitch-deck/index.ts"
+    "./utils/embeddings": "./src/utils/embeddings.ts"
   },
-  "scripts": { "build": "tsc", "test": "vitest run" },
+  "scripts": { "build": "tsc", "test": "vitest" },
   "dependencies": {
     "@ngo/database": "workspace:*",
     "@ngo/audit": "workspace:*",
     "@ngo/auth": "workspace:*",
     "@ngo/queue": "workspace:*",
     "@ngo/storage": "workspace:*",
-    "@google-cloud/vertexai": "^1.0.0",
-    "google-auth-library": "^9.0.0",
-    "@google/generative-ai": "^0.24.1",
+    "openai": "^4.28.0",
     "@langchain/langgraph": "^0.2.0",
     "@langchain/openai": "^0.0.28",
-    "openai": "^4.28.0",
-    "zod": "^3.22.0",
     "imghash": "^1.1.2",
     "pptxgenjs": "^3.12.0",
-    "pdfkit": "^0.15.0",
-    "dotenv": "^16.0.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.5.0",
-    "vitest": "^4.1.0"
+    "pdfkit": "^0.15.0"
   }
 }

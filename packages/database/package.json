@@ -2,11 +2,18 @@
   "name": "@ngo/database",
   "version": "1.0.0",
   "main": "./src/client.ts",
-  "exports": {
-    ".": "./src/client.ts"
+  "scripts": {
+    "build": "tsc"
   },
-  "scripts": { "build": "tsc" },
-  "dependencies": { "@prisma/client": "^5.22.0" },
-  "devDependencies": { "prisma": "^5.22.0", "ts-node": "^10.9.0" },
-  "prisma": { "seed": "ts-node --transpile-only prisma/seed.ts" }
+  "dependencies": {
+    "@prisma/client": "^5.10.0",
+    "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "prisma": "^5.10.0",
+    "ts-node": "^10.9.0"
+  },
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
+  }
 }
