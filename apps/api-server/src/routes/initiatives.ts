@@ -5,6 +5,8 @@ import { queues, DEFAULT_JOB_OPTIONS } from "@ngo/queue";
 import { requirePermission } from "../middleware/rbac";
 import { sanitize } from "../utils/sanitize";
 import { z } from "zod";
+import { existsSync, readFileSync } from "fs";
+import { basename } from "path";
 
 const CreateInitiativeBody = z.object({
   title: z.string().min(3).max(200),
@@ -36,7 +38,137 @@ const StatusUpdateBody = z.object({
   reason: z.string().max(500).optional(),
 });
 
+const getDocxParser = async () => (await import("mammoth")).default;
+const getPdfParser  = async () => { const m = await import("pdf-parse"); return (m as any).default || m; };
+
+async function extractInitiativeFieldsWithAI(documentText: string, fileName: string) {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) return null;
+
+  const model  = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
+  const url    = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const prompt = `You are an expert at extracting structured data from NGO project proposal documents.
+Extract the following fields from this NGO initiative document and return ONLY valid JSON:
+
+=== DOCUMENT ===
+${documentText.slice(0, 15000)}
+=== END ===
+
+Return this exact JSON structure:
+{
+  "title": "Short descriptive title of the initiative (max 100 chars)",
+  "sector": "EDUCATION",
+  "state": "Maharashtra",
+  "district": "Pune",
+  "description": "2-3 sentence description of what this initiative does",
+  "targetBeneficiaries": 500,
+  "budgetRequired": 2500000,
+  "sdgTags": ["SDG4", "SDG10"],
+  "durationMonths": 12
+}
+
+Rules:
+- sector must be one of: EDUCATION, HEALTHCARE, LIVELIHOOD, ENVIRONMENT, WATER_SANITATION, OTHER
+- budgetRequired in rupees (1 lakh = 100000, 1 crore = 10000000). Use 0 if not mentioned.
+- targetBeneficiaries is a number. Use 100 if not mentioned.
+- sdgTags: 1-3 SDG tags like SDG4, SDG3, SDG6, SDG13 etc. Infer from context.
+- If field not found, use reasonable defaults.
+- title: use "${fileName.replace(/\.[^.]+$/, "")}" if no clear title in the document.`;
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json" },
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as any;
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    return JSON.parse(text.replace(/```json\n?|```/g, "").trim());
+  } catch {
+    return null;
+  }
+}
+
 export async function initiativesRoutes(app: FastifyInstance) {
+
+  // POST /upload — multipart NGO document upload with AI extraction
+  app.post("/upload", { preHandler: requirePermission("initiative:create") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
+    let fileBuffer: Buffer | null = null;
+    let fileName = "document";
+    let fileText = "";
+
+    try {
+      const parts = (req as any).parts();
+      for await (const part of parts) {
+        if (part.type === "file") {
+          fileBuffer = await part.toBuffer();
+          fileName   = part.filename ?? "document";
+          try {
+            if (fileName.toLowerCase().endsWith(".docx")) {
+              const mammoth = await getDocxParser();
+              fileText = (await mammoth.extractRawText({ buffer: fileBuffer })).value;
+            } else if (fileName.toLowerCase().endsWith(".pdf")) {
+              const pdfParse = await getPdfParser();
+              fileText = (await pdfParse(fileBuffer)).text;
+            } else {
+              fileText = fileBuffer.toString("utf-8").slice(0, 15000);
+            }
+          } catch { fileText = ""; }
+        }
+      }
+    } catch (err: any) {
+      return reply.status(400).send({ success: false, error: { code: "UPLOAD_ERROR", message: err.message } });
+    }
+
+    if (!fileBuffer) {
+      return reply.status(400).send({ success: false, error: { code: "VALIDATION_ERROR", message: "File is required" } });
+    }
+    if (fileName.toLowerCase().endsWith(".pdf") && fileText.trim().length < 50) {
+      return reply.status(400).send({ success: false, error: { code: "UNREADABLE_PDF", message: "PDF has no readable text. Please upload a text-based PDF or DOCX." } });
+    }
+
+    // AI extraction
+    const extracted = await extractInitiativeFieldsWithAI(fileText, fileName);
+    console.log("[initiative-upload] AI extracted:", extracted);
+
+    const VALID_SECTORS = ["EDUCATION","HEALTHCARE","LIVELIHOOD","ENVIRONMENT","WATER_SANITATION","INFRASTRUCTURE","WOMEN_EMPOWERMENT","CHILD_WELFARE","OTHER"];
+    const sector = VALID_SECTORS.includes(extracted?.sector) ? extracted.sector : "OTHER";
+
+    const initiative = await prisma.initiative.create({
+      data: {
+        tenantId,
+        title:               extracted?.title       || fileName.replace(/\.[^.]+$/, ""),
+        sector:              sector as any,
+        geography:           { state: extracted?.state || "India", district: extracted?.district || "" },
+        description:         extracted?.description || fileText.slice(0, 1000) || `Uploaded from: ${fileName}`,
+        targetBeneficiaries: Math.max(1, parseInt(extracted?.targetBeneficiaries) || 100),
+        budgetRequired:      Math.max(1, parseFloat(extracted?.budgetRequired)    || 1000000),
+        sdgTags:             Array.isArray(extracted?.sdgTags) && extracted.sdgTags.length > 0 ? extracted.sdgTags : ["SDG4"],
+        status:              "ACTIVE",
+      },
+    });
+
+    // Trigger embedding worker
+    await queues.initiativeEmbedding.add("embed", { initiativeId: initiative.id, tenantId }, DEFAULT_JOB_OPTIONS);
+
+    await auditLog({
+      tenantId,
+      eventType:  "INITIATIVE_CREATED",
+      entityType: "Initiative",
+      entityId:   initiative.id,
+      actorId:    (req as any).user?.userId ?? "system",
+      actorType:  "USER",
+      afterState: { title: initiative.title, sector: initiative.sector, source: "document-upload" },
+    });
+
+    return reply.status(201).send({ success: true, data: { id: initiative.id, title: initiative.title, sector: initiative.sector } });
+  });
 
   // GET / (becomes /api/initiatives)
   app.get("/", { preHandler: requirePermission("initiative:read") }, async (req, reply) => {
@@ -325,6 +457,71 @@ export async function initiativesRoutes(app: FastifyInstance) {
     }).filter(Boolean);
 
     return reply.send({ success: true, data: enriched });
+  });
+
+  // GET /:id/pitch-deck — download the latest PPTX pitch deck for this initiative
+  app.get<{ Params: { id: string } }>("/:id/pitch-deck", {
+    preHandler: requirePermission("initiative:read"),
+  }, async (req, reply) => {
+    const { tenantId } = req as any;
+    const { id } = req.params;
+
+    const matches = await prisma.matchResult.findMany({
+      where: { initiativeId: id, requirement: { tenantId } },
+      select: { requirementId: true },
+    });
+
+    if (matches.length === 0) {
+      return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "No pitch deck available for this initiative yet." } });
+    }
+
+    const requirementIds = matches.map((m) => m.requirementId);
+
+    const artifact = await prisma.contentArtifact.findFirst({
+      where: { tenantId, type: "PITCH_DECK", approvalStatus: "APPROVED", relatedEntityId: { in: requirementIds } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!artifact?.fileUrl) {
+      return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "No approved pitch deck available yet. Please check back after DRM review." } });
+    }
+
+    if (!existsSync(artifact.fileUrl)) {
+      return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Pitch deck file not found on server." } });
+    }
+
+    const fileBuffer = readFileSync(artifact.fileUrl);
+    const fileName = basename(artifact.fileUrl);
+
+    reply.header("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+    reply.header("Content-Disposition", `attachment; filename="${fileName}"`);
+    return reply.send(fileBuffer);
+  });
+
+  // GET /:id/matches — which CSR requirements were matched to this initiative
+  app.get<{ Params: { id: string } }>("/:id/matches", {
+    preHandler: requirePermission("initiative:read"),
+  }, async (req, reply) => {
+    const { tenantId } = req as any;
+    const { id } = req.params;
+
+    const matches = await prisma.matchResult.findMany({
+      where: { initiativeId: id, requirement: { tenantId } },
+      include: {
+        requirement: {
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            extractedFields: true,
+            donor: { select: { orgName: true, type: true } },
+          },
+        },
+      },
+      orderBy: { overallScore: "desc" },
+    });
+
+    return reply.send({ success: true, data: matches });
   });
 
 }

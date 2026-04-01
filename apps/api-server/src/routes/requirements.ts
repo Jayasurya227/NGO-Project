@@ -4,13 +4,23 @@ import { auditLog } from "@ngo/audit";
 import { queues, DEFAULT_JOB_OPTIONS } from "@ngo/queue";
 import { requirePermission } from "../middleware/rbac";
 import { z } from "zod";
+import { existsSync, readFileSync } from "fs";
+import { basename } from "path";
+import { runPitchDeckAgent } from "@ngo/agents/pitch-deck";
 
 // Lazy-loaded imports to prevent startup crashes
 const getDocxParser = async () => (await import("mammoth")).default;
-const getPdfParser = async () => {
-  const mod = await import("pdf-parse");
-  return (mod as any).default || mod;
-};
+// pdf-parse removed — pdfjs-dist v5 requires DOMMatrix (browser-only API)
+// PDFs are now always handled by Gemini inline in the extraction agent
+
+function getMimeType(fileName: string): string {
+  const n = fileName.toLowerCase();
+  if (n.endsWith(".pdf"))  return "application/pdf";
+  if (n.endsWith(".png"))  return "image/png";
+  if (n.endsWith(".webp")) return "image/webp";
+  if (n.endsWith(".gif"))  return "image/gif";
+  return "image/jpeg"; // jpg, jpeg, bmp, tiff, etc.
+}
 
 
 
@@ -50,25 +60,25 @@ export async function requirementsRoutes(app: FastifyInstance) {
         } else if (part.type === "file") {
           fileBuffer = await part.toBuffer();
           fileName = part.filename;
-          // Try to extract text from buffer properly based on extension
+          const nameLower = fileName?.toLowerCase() ?? "";
           try {
-            if (fileName?.toLowerCase().endsWith(".docx")) {
+            if (nameLower.endsWith(".docx") || nameLower.endsWith(".doc")) {
+              // Word docs: mammoth gives perfect text — no AI needed
               const mammoth = await getDocxParser();
               const result = await mammoth.extractRawText({ buffer: fileBuffer });
               fileText = result.value;
-            } else if (fileName?.toLowerCase().endsWith(".pdf")) {
-              const pdfParse = await getPdfParser();
-              const data = await pdfParse(fileBuffer);
-              fileText = data.text;
-            } else {
-
-              fileText = fileBuffer.toString("utf-8").replace(/[^\x20-\x7E\n\r\t]/g, " ").slice(0, 12000);
+            } else if (nameLower.endsWith(".txt") || nameLower.endsWith(".csv")) {
+              fileText = fileBuffer.toString("utf-8").slice(0, 20000);
+            } else if (nameLower.endsWith(".pdf")) {
+              // PDFs always go to Gemini inline — fileText stays ""
+              // Gemini handles both text-based and scanned PDFs natively
             }
+            // For .pdf with little text, .jpg, .png etc: fileText stays ""
+            // The agent will use rawFileBase64 + mimeType to read via Gemini multimodal
           } catch (err) {
             console.error("[upload] Text extraction failed:", err);
             fileText = "";
           }
-
         }
       }
     } catch (err: any) {
@@ -100,11 +110,21 @@ export async function requirementsRoutes(app: FastifyInstance) {
       });
     }
 
+    const mimeType = getMimeType(fileName ?? "")
+    const hasText = fileText.trim().length >= 80
+
+    // Store base64 in DB (not Redis) — reliable for any file size
     const requirement = await prisma.sponsorRequirement.create({
       data: {
         tenantId,
         donorId,
         rawDocumentUrl: `uploaded:${fileName}`,
+        extractedFields: hasText
+          ? { rawText: fileText.slice(0, 20000) }
+          : {
+              rawFileMimeType: mimeType,
+              rawFileBase64: fileBuffer.toString("base64"), // stored in DB so worker can read it
+            },
         status: "PENDING_EXTRACTION",
       },
       select: { id: true, status: true, createdAt: true },
@@ -116,7 +136,8 @@ export async function requirementsRoutes(app: FastifyInstance) {
         requirementId: requirement.id,
         tenantId,
         documentUrl: "",
-        documentText: fileText || "Document uploaded but text could not be extracted. Please review manually.",
+        documentText: fileText || "",
+        // base64 NOT passed via Redis — worker reads it from DB
       },
       DEFAULT_JOB_OPTIONS
     );
@@ -178,7 +199,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
       });
     }
 
-    let { donorId, documentUrl, notes } = parsed.data;
+    let { donorId, documentUrl } = parsed.data;
     if (role === "DONOR" && decodedDonorId) {
       donorId = decodedDonorId;
     }
@@ -267,6 +288,41 @@ export async function requirementsRoutes(app: FastifyInstance) {
     });
   });
 
+  // GET /pitch-decks — approved pitch decks for this donor's requirements (must be before /:id)
+  app.get("/pitch-decks", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
+    const { tenantId } = req as any;
+    const donorId = (req as any).user?.donorId;
+    const role = (req as any).role;
+
+    const where: any = { tenantId };
+    if (role === "DONOR" && donorId) {
+      where.donorId = donorId;
+    }
+
+    const requirements = await prisma.sponsorRequirement.findMany({
+      where,
+      select: { id: true },
+    });
+
+    const requirementIds = requirements.map((r: any) => r.id);
+    if (requirementIds.length === 0) {
+      return reply.send({ success: true, data: [] });
+    }
+
+    const artifacts = await prisma.contentArtifact.findMany({
+      where: {
+        tenantId,
+        type: "PITCH_DECK",
+        approvalStatus: { in: ["PENDING_REVIEW", "APPROVED"] },
+        relatedEntityId: { in: requirementIds },
+      },
+      select: { id: true, relatedEntityId: true, approvalStatus: true, approvedAt: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return reply.send({ success: true, data: artifacts });
+  });
+
   // GET /:id
   app.get("/:id", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
@@ -283,16 +339,12 @@ export async function requirementsRoutes(app: FastifyInstance) {
 
     if (!requirement) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Requirement not found" } });
 
-    const latestJob = await prisma.agentJobLog.findFirst({
-      where: { tenantId, agentName: "requirements-analyst" },
-      orderBy: { createdAt: "desc" },
-    });
-
     return reply.send({
       success: true,
       data: {
         id: requirement.id,
         status: requirement.status,
+        rawDocumentUrl: requirement.rawDocumentUrl,
         donor: requirement.donor,
         extractedFields: requirement.extractedFields,
         confidenceScores: requirement.confidenceScores,
@@ -301,9 +353,6 @@ export async function requirementsRoutes(app: FastifyInstance) {
         updatedAt: requirement.updatedAt,
         matchCount: requirement._count.matchResults,
         topMatches: requirement.matchResults,
-        latestJob: latestJob
-          ? { status: latestJob.status, latencyMs: latestJob.latencyMs, error: latestJob.error }
-          : null,
       },
     });
   });
@@ -311,7 +360,6 @@ export async function requirementsRoutes(app: FastifyInstance) {
   // POST /:id/validate
   app.post("/:id/validate", { preHandler: requirePermission("requirement:update") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
-    const userId = (req as any).userId;
     const { id } = req.params as { id: string };
 
     const parsed = ValidateRequirementBody.safeParse(req.body);
@@ -370,6 +418,51 @@ export async function requirementsRoutes(app: FastifyInstance) {
     });
 
     return reply.send({ success: true, data: { status: "VALIDATED", matchingQueued: true } });
+  });
+
+  // POST /:id/request-resubmission
+  app.post("/:id/request-resubmission", { preHandler: requirePermission("requirement:update") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
+    const { id } = req.params as { id: string };
+    const { note } = (req.body ?? {}) as { note?: string };
+
+    const requirement = await prisma.sponsorRequirement.findFirst({ where: { id, tenantId } });
+    if (!requirement) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Requirement not found" } });
+
+    if (!["EXTRACTED", "NEEDS_REVIEW", "PENDING_EXTRACTION"].includes(requirement.status)) {
+      return reply.status(400).send({ success: false, error: { code: "INVALID_STATE", message: `Cannot request resubmission for status: ${requirement.status}` } });
+    }
+
+    const actorId = (req as any).user?.userId ?? "system";
+
+    // Reset to PENDING_EXTRACTION so donor can upload a new document
+    // Keep the note in extractedFields so donor portal can show it
+    await prisma.sponsorRequirement.update({
+      where: { id },
+      data: {
+        status: "PENDING_EXTRACTION",
+        extractedFields: {
+          resubmissionRequested: true,
+          resubmissionNote: note || "The submitted document could not be extracted accurately. Please upload a clearer or more complete document.",
+          resubmissionRequestedAt: new Date().toISOString(),
+          resubmissionRequestedBy: actorId,
+        } as any,
+        confidenceScores: null,
+      },
+    });
+
+    await auditLog({
+      tenantId,
+      eventType: "REQUIREMENT_RESUBMISSION_REQUESTED",
+      entityType: "SponsorRequirement",
+      entityId: id,
+      actorId,
+      actorType: "USER",
+      beforeState: { status: requirement.status },
+      afterState: { status: "PENDING_EXTRACTION", note },
+    });
+
+    return reply.send({ success: true, data: { status: "PENDING_EXTRACTION", message: "Resubmission requested. Donor has been notified." } });
   });
 
   // GET /:id/matches
@@ -445,7 +538,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const { tenantId, user, role } = req as any;
     const { id } = req.params as { id: string };
-    const { reorderedRanks } = req.body as { reorderedRanks?: Record<string, number> };
+    const { approvedMatchIds, reorderedRanks } = req.body as { approvedMatchIds: string[]; reorderedRanks?: Record<string, number> };
 
     const actorId = user?.userId ?? user?.donorId ?? "system";
     const actorType = role === "DONOR" ? "DONOR" : "USER";
@@ -453,20 +546,13 @@ export async function requirementsRoutes(app: FastifyInstance) {
     const requirement = await prisma.sponsorRequirement.findFirst({ where: { id, tenantId } });
     if (!requirement) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Requirement not found" } });
 
-    // ... (manual rank updates)
     if (reorderedRanks) {
       for (const [matchId, rank] of Object.entries(reorderedRanks)) {
-        await prisma.matchResult.update({
-          where: { id: matchId },
-          data:  { rank },
-        });
+        await prisma.matchResult.update({ where: { id: matchId }, data: { rank } });
       }
     }
 
-    await prisma.sponsorRequirement.update({
-      where: { id },
-      data:  { status: "MATCHED" },
-    });
+    await prisma.sponsorRequirement.update({ where: { id }, data: { status: "MATCHED" } });
 
     const { auditLog: log } = await import("@ngo/audit");
     await log({
@@ -474,13 +560,74 @@ export async function requirementsRoutes(app: FastifyInstance) {
       eventType: "MATCHES_APPROVED",
       entityType: "SponsorRequirement",
       entityId: id,
-      actorId: actorId,
+      actorId,
       actorType: actorType as any,
       afterState: { reorderedRanks: reorderedRanks ?? null },
     });
 
-    return reply.send({ success: true, data: { status: "MATCHED" } });
+    // Generate pitch deck and send to DRM review queue (Content & Approvals)
+    runPitchDeckAgent({ requirementId: id, tenantId, approvedMatchIds })
+      .then(r => console.log(`[pitch-deck] Artifact ${r.contentArtifactId} queued for DRM review`))
+      .catch(err => console.error("[pitch-deck] Generation failed:", err.message));
+
+    return reply.send({ success: true, data: { status: "MATCHED", pitchDeckQueued: true } });
   });
+
+  // GET /matches - global view of all match results across all requirements
+  app.get("/matches", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
+
+    const allMatches = await prisma.matchResult.findMany({
+      where: {
+        requirement: { tenantId },
+      },
+      include: {
+        initiative: {
+          select: { id: true, title: true, sector: true, geography: true, budgetRequired: true, budgetFunded: true },
+        },
+        requirement: {
+          select: {
+            id: true,
+            status: true,
+            extractedFields: true,
+            donor: { select: { orgName: true, type: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return reply.send({
+      success: true,
+      data: allMatches,
+      meta: { total: allMatches.length },
+    });
+  });
+
+  // GET /:id/pitch-deck-file — download the approved PPTX for a specific requirement
+  app.get<{ Params: { id: string } }>("/:id/pitch-deck-file", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
+    const { tenantId } = req as any;
+    const { id } = req.params;
+
+    const artifact = await prisma.contentArtifact.findFirst({
+      where: { tenantId, type: "PITCH_DECK", approvalStatus: "APPROVED", relatedEntityId: id },
+      orderBy: { approvedAt: "desc" },
+    });
+
+    if (!artifact?.fileUrl) {
+      return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "No approved pitch deck found." } });
+    }
+
+    if (!existsSync(artifact.fileUrl)) {
+      return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Pitch deck file not found on server." } });
+    }
+
+    const fileBuffer = readFileSync(artifact.fileUrl);
+    reply.header("Content-Type", "application/vnd.openxmlformats-officedocument.presentationml.presentation");
+    reply.header("Content-Disposition", `attachment; filename="${basename(artifact.fileUrl)}"`);
+    return reply.send(fileBuffer);
+  });
+
 }
 
 function validateBody(schema: z.ZodSchema) {

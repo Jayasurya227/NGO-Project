@@ -3,6 +3,8 @@ import { prisma } from '@ngo/database';
 import { auditLog } from '@ngo/audit';
 import { requirePermission } from '../middleware/rbac';
 import { z } from 'zod';
+import { existsSync, readFileSync } from 'fs';
+import { basename } from 'path';
 
 const ApprovalBody = z.object({
   notes: z.string().max(1000).optional(),
@@ -40,8 +42,8 @@ export async function contentRoutes(app: FastifyInstance) {
     });
   });
 
-  // GET /api/content/:id - single artifact
- app.get<{ Params: { id: string } }>('/:id', {  // ✅ Changed from '/api/content/:id'
+  // GET /api/content/:id - single artifact with downloadUrl if file exists
+  app.get<{ Params: { id: string } }>('/:id', {
     preHandler: requirePermission('content:read'),
   }, async (request, reply) => {
     const { tenantId } = request as any;
@@ -58,10 +60,39 @@ export async function contentRoutes(app: FastifyInstance) {
       });
     }
 
+    const hasFile = !!artifact.fileUrl && existsSync(artifact.fileUrl);
+
     return reply.send({
       success: true,
-      data: artifact,
+      data: {
+        ...artifact,
+        downloadUrl: hasFile ? `http://localhost:4000/api/content/${id}/download` : null,
+      },
     });
+  });
+
+  // GET /api/content/:id/download — stream the PPTX file to the browser
+  app.get<{ Params: { id: string } }>('/:id/download', {
+    preHandler: requirePermission('content:read'),
+  }, async (request, reply) => {
+    const { tenantId } = request as any;
+    const { id } = request.params;
+
+    const artifact = await prisma.contentArtifact.findFirst({
+      where: { id, tenantId },
+      select: { fileUrl: true, approvalStatus: true },
+    });
+
+    if (!artifact?.fileUrl || !existsSync(artifact.fileUrl)) {
+      return reply.status(404).send({ success: false, error: { code: 'NOT_FOUND', message: 'File not found on server.' } });
+    }
+
+    const fileBuffer = readFileSync(artifact.fileUrl);
+    const fileName = basename(artifact.fileUrl);
+
+    reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    reply.header('Content-Disposition', `attachment; filename="${fileName}"`);
+    return reply.send(fileBuffer);
   });
 
   // POST /api/content/:id/approve
