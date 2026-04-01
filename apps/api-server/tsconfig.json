@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "strict": false,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ngo/auth/encryption": ["../../packages/auth/src/encryption"],
+      "@ngo/auth": ["../../packages/auth/src"],
+      "@ngo/audit": ["../../packages/audit/src"],
+      "@ngo/database": ["../../packages/database/src"],
+      "@ngo/queue": ["../../packages/queue/src"],
+      "@ngo/types": ["../../packages/types/src"]
+    },
+    "skipLibCheck": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

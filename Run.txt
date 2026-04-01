@@ -1,0 +1,60 @@
+terminal-1 
+
+ cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform
+ docker-compose up -d
+
+ cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform\apps\api-server
+.\node_modules\.bin\tsx src/server.ts
+
+terminal-2
+
+cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform
+$login = Invoke-RestMethod -Uri "http://localhost:4000/api/auth/login" -Method POST -ContentType "application/json" -Body '{"email":"drm@shiksha.test","password":"TestPass123!","subdomain":"shiksha-foundation"}'
+Write-Host "Role:" $login.data.role
+Write-Host "TenantId:" $login.data.tenantId
+
+terminal-3
+
+#To run the website.
+cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform\apps\web-admin
+pnpm dev
+
+On the login page enter:
+- Email: `drm@shiksha.test`
+- Password: `TestPass123!`
+- Organisation: `shiksha-foundation`
+
+
+
+M9 Contact name: Anita Sharma
+M9 Email: anita.sharma@tcs.com
+
+M11 Initiatives total: 7
+
+M12 Requirement ID: 449c3720-bcab-4bff-bf0f-a095d4123057
+M12 Job ID: 1
+
+M19 Status: VALIDATED
+M19 Matching queued: True
+
+TERMINAL-1
+
+cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform
+docker-compose up -d
+.\start-servers.ps1
+
+TERMINAL-2
+
+cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform
+.\start-workers.ps1
+
+#To kill the server
+npx kill-port 4000
+
+#To kill the workers            
+npx kill-port 3000
+
+npx kill-port 4000
+cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform
+.\start-servers.ps1
+.\start-workers.ps1

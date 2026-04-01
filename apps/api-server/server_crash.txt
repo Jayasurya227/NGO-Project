@@ -1,0 +1,38 @@
+﻿ENV loaded - DB: YES
+ENV loaded - REDIS: YES
+npx : Server failed to 
+start: ReferenceError: 
+requirePermission is 
+not defined
+At line:1 char:1
++ npx tsx 
+src/server.ts 2>&1 | 
+Out-File -FilePath 
+server_crash.txt -Enc 
+...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (Server failed   
+  t... is not defin    
+ed:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+    at 
+requirementsRoutes (c:\
+Users\pavan\Desktop\NGO
+_IMPACT\apps\api-server
+\src\routes\requirement
+s.ts:25:17)
+    at start (c:\Users\
+pavan\Desktop\NGO_IMPAC
+T\apps\api-server\src\s
+erver.ts:61:9)
+    at process.processT
+icksAndRejections (node
+:internal/process/task_
+queues:95:5)
