@@ -6,18 +6,23 @@
     ".": "./src/index.ts",
     "./utils/embeddings": "./src/utils/embeddings.ts"
   },
-  "scripts": { "build": "tsc", "test": "vitest" },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest"
+  },
   "dependencies": {
-    "@ngo/database": "workspace:*",
-    "@ngo/audit": "workspace:*",
-    "@ngo/auth": "workspace:*",
-    "@ngo/queue": "workspace:*",
-    "@ngo/storage": "workspace:*",
-    "openai": "^4.28.0",
+    "@google-cloud/vertexai": "^1.10.4",
+    "@google/generative-ai": "^0.24.1",
     "@langchain/langgraph": "^0.2.0",
     "@langchain/openai": "^0.0.28",
+    "@ngo/audit": "workspace:*",
+    "@ngo/auth": "workspace:*",
+    "@ngo/database": "workspace:*",
+    "@ngo/queue": "workspace:*",
+    "@ngo/storage": "workspace:*",
     "imghash": "^1.1.2",
-    "pptxgenjs": "^3.12.0",
-    "pdfkit": "^0.15.0"
+    "openai": "^4.28.0",
+    "pdfkit": "^0.15.0",
+    "pptxgenjs": "^3.12.0"
   }
 }

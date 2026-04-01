@@ -4,8 +4,16 @@ import { auditLog } from "@ngo/audit";
 import { queues, DEFAULT_JOB_OPTIONS } from "@ngo/queue";
 import { requirePermission } from "../middleware/rbac";
 import { z } from "zod";
-import { getMimeType, runPitchDeckAgent } from "./requirements.service";
 
+function getMimeType(fileName: string): string {
+  if (fileName.endsWith(".pdf")) return "application/pdf";
+  if (fileName.endsWith(".png")) return "image/png";
+  if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) return "image/jpeg";
+  return "application/octet-stream";
+}
+
+const getDocxParser = async () => (await import("mammoth")).default;
+const getPdfParser = async () => { const m = await import("pdf-parse"); return (m as any).default || m; };
 
 const CreateRequirementBody = z.object({
   donorId: z.string().uuid(),
@@ -19,15 +27,18 @@ const ValidateRequirementBody = z.object({
 
 const ApproveMatchesBody = z.object({
   approvedMatchIds: z.array(z.string()).min(1).max(5),
-  reorderedRanks:   z.record(z.number()).optional(),
+  reorderedRanks: z.record(z.number()).optional(),
 });
 
 export async function requirementsRoutes(app: FastifyInstance) {
 
+  // POST /api/requirements/upload
+  app.post("/upload", { preHandler: requirePermission("requirement:create") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
 
     let donorId: string | null = null;
     let fileBuffer: Buffer | null = null;
-    let fileName: string | null = null;
+    let fileName: string = "document";
     let fileText = "";
 
     try {
@@ -37,7 +48,20 @@ export async function requirementsRoutes(app: FastifyInstance) {
           if (part.fieldname === "donorId") donorId = part.value as string;
         } else if (part.type === "file") {
           fileBuffer = await part.toBuffer();
+          fileName = part.filename ?? "document"; // FIX 1: capture fileName
 
+          // FIX 2: extract text from file (was missing entirely)
+          try {
+            if (fileName.toLowerCase().endsWith(".docx")) {
+              const mammoth = await getDocxParser();
+              fileText = (await mammoth.extractRawText({ buffer: fileBuffer })).value;
+            } else if (fileName.toLowerCase().endsWith(".pdf")) {
+              const pdfParse = await getPdfParser();
+              fileText = (await pdfParse(fileBuffer)).text;
+            } else {
+              fileText = fileBuffer.toString("utf-8").slice(0, 15000);
+            }
+          } catch { fileText = ""; }
         }
       }
     } catch (err: any) {
@@ -69,10 +93,9 @@ export async function requirementsRoutes(app: FastifyInstance) {
       });
     }
 
-    const mimeType = getMimeType(fileName ?? "")
-    const hasText = fileText.trim().length >= 80
+    const mimeType = getMimeType(fileName);
+    const hasText = fileText.trim().length >= 80; // FIX 3: now correctly evaluated
 
-    // Store base64 in DB (not Redis) — reliable for any file size
     const requirement = await prisma.sponsorRequirement.create({
       data: {
         tenantId,
@@ -81,9 +104,9 @@ export async function requirementsRoutes(app: FastifyInstance) {
         extractedFields: hasText
           ? { rawText: fileText.slice(0, 20000) }
           : {
-              rawFileMimeType: mimeType,
-              rawFileBase64: fileBuffer.toString("base64"), // stored in DB so worker can read it
-            },
+            rawFileMimeType: mimeType,
+            rawFileBase64: fileBuffer.toString("base64"),
+          },
         status: "PENDING_EXTRACTION",
       },
       select: { id: true, status: true, createdAt: true },
@@ -95,13 +118,14 @@ export async function requirementsRoutes(app: FastifyInstance) {
         requirementId: requirement.id,
         tenantId,
         documentUrl: "",
-        documentText: fileText || "",
-        // base64 NOT passed via Redis — worker reads it from DB
+        documentText: fileText || "", // FIX 4: pass extracted text to worker
       },
       DEFAULT_JOB_OPTIONS
     );
 
-      await prisma.agentJobLog.create({ 
+    await prisma.agentJobLog.create({
+      data: { tenantId, jobId: job.id!, agentName: "extract", status: "QUEUED" },
+    });
 
     return reply.status(202).send({
       success: true,
@@ -118,7 +142,6 @@ export async function requirementsRoutes(app: FastifyInstance) {
   app.post("/", { preHandler: requirePermission("requirement:create") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
 
-
     const parsed = CreateRequirementBody.safeParse(req.body);
     if (!parsed.success) {
       return reply.status(400).send({
@@ -127,6 +150,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
       });
     }
 
+    const { donorId, documentUrl } = parsed.data;
 
     const donor = await prisma.donor.findFirst({ where: { id: donorId, tenantId } });
     if (!donor) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Donor not found" } });
@@ -138,12 +162,15 @@ export async function requirementsRoutes(app: FastifyInstance) {
 
     const job = await queues.requirementExtraction.add(
       "extract",
-      { requirementId: requirement.id, tenantId, documentUrl: documentUrl ?? "" },
+      { requirementId: requirement.id, tenantId, documentUrl: documentUrl ?? "", documentText: "" },
       DEFAULT_JOB_OPTIONS
     );
 
     await prisma.agentJobLog.upsert({
-
+      where: { jobId: job.id! },
+      update: { status: "QUEUED" },
+      create: { tenantId, jobId: job.id!, agentName: "extract", status: "QUEUED" },
+    });
 
     return reply.status(202).send({
       success: true,
@@ -159,7 +186,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
   // GET /api/requirements
   app.get("/", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
-
+    const page = Number((req.query as any).page) || 1;
     const limit = Number((req.query as any).limit) || 20;
 
     const [requirements, total] = await Promise.all([
@@ -174,6 +201,9 @@ export async function requirementsRoutes(app: FastifyInstance) {
     ]);
 
     return reply.send({
+      success: true,
+      data: { requirements, total, page, limit },
+    });
   });
 
   // GET /api/requirements/:id
@@ -210,7 +240,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
     });
   });
 
-  // POST /api/requirements/:id/validate  ← FIXED: removed duplicate /api/requirements prefix
+  // POST /api/requirements/:id/validate
   app.post("/:id/validate", { preHandler: requirePermission("requirement:update") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const { id } = req.params as { id: string };
@@ -235,10 +265,12 @@ export async function requirementsRoutes(app: FastifyInstance) {
     await prisma.sponsorRequirement.update({
       where: { id },
       data: { status: "VALIDATED", extractedFields: mergedFields },
-    });       
+    });
+
+    return reply.send({ success: true });
   });
 
-  // GET /api/requirements/:id/matches  ← FIXED: removed duplicate prefix
+  // GET /api/requirements/:id/matches
   app.get("/:id/matches", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
     const { id } = req.params as { id: string };
@@ -274,3 +306,4 @@ export async function requirementsRoutes(app: FastifyInstance) {
     });
   });
 
+}

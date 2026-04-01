@@ -1,7 +1,7 @@
 import "../load-env";
 import { Job } from "bullmq";
 import { BaseAgentWorker } from "../base-worker";
-import { runPitchDeckAgent } from "../../../agents/src/pitch-deck/index";
+import { runPitchDeckAgent } from "@ngo/agents/pitch-deck/index";
 import { queues } from "../queues";
 import { prisma } from "@ngo/database";
 
