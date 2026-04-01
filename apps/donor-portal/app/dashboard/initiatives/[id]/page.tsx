@@ -2,16 +2,14 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { 
-  ChevronLeft, 
-  Calendar, 
-  Target, 
-  IndianRupee, 
+import {
+  ChevronLeft,
+  Calendar,
+  IndianRupee,
   CheckCircle2,
   Clock,
   MapPin,
   Heart,
-  ArrowUpRight,
   Loader2,
   Upload,
   FileText,
@@ -145,6 +143,14 @@ export default function DonorInitiativeDetailPage() {
   }
 
   const initiative = initData?.data;
+
+  // Strip raw PDF/binary content from description
+  function safeDescription(raw: string | null | undefined): string {
+    if (!raw) return "";
+    if (raw.trimStart().startsWith("%PDF") || raw.includes("\x00") || /[\x00-\x08\x0e-\x1f]/.test(raw)) return "";
+    return raw;
+  }
+
   if (!initiative) {
     return (
       <div className="p-8 text-center text-slate-500">
@@ -192,7 +198,7 @@ export default function DonorInitiativeDetailPage() {
                 {initiative.title}
               </h1>
               <p className="text-slate-500 text-base leading-relaxed max-w-2xl mb-6 line-clamp-3">
-                 {initiative.description || "Fund this verified initiative to drive sustainable impact in the community."}
+                 {safeDescription(initiative.description) || "Fund this verified initiative to drive sustainable impact in the community."}
               </p>
               <div className="flex flex-wrap gap-2">
                 {initiative.sdgTags?.map((tag: string) => (
@@ -245,7 +251,7 @@ export default function DonorInitiativeDetailPage() {
               </h2>
               <div className="bg-white border border-slate-200 rounded-3xl p-8 shadow-sm">
                 <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
-                  {initiative.description || "No detailed description provided for this initiative yet."}
+                  {safeDescription(initiative.description) || "No detailed description provided for this initiative yet."}
                 </p>
               </div>
             </section>
@@ -322,14 +328,14 @@ export default function DonorInitiativeDetailPage() {
                 Join us in making a sustainable difference.
               </p>
               <div className="flex flex-col gap-3">
-                <button 
+                <button
                   onClick={() => setShowUploadModal(true)}
                   className="w-full py-3 bg-white text-emerald-600 font-bold rounded-xl text-sm flex items-center justify-center gap-2 border border-emerald-100 ring-4 ring-emerald-50/50"
                 >
                   Upload RFP for Analysis
                   <Upload className="w-4 h-4" />
                 </button>
-                <button 
+                <button
                   onClick={() => setShowInfoModal(true)}
                   className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-900/40 active:scale-95"
                 >
