@@ -50,8 +50,8 @@ export default function DonorDashboardLayout({ children }: { children: React.Rea
             </svg>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 leading-none truncate">NGO Impact</p>
-            <p className="text-[11px] text-slate-400 font-medium tracking-wider uppercase mt-0.5">Donor Portal</p>
+            <p className="text-sm font-semibold text-slate-900 leading-none truncate">Impact Platform</p>
+            <p className="text-[11px] text-slate-400 font-medium tracking-wider uppercase mt-0.5">CSR Portal</p>
           </div>
         </div>
 

@@ -2,7 +2,6 @@
 import { useState, useRef } from 'react'
 import { api } from '../../../lib/api'
 
-type FormType = 'donor' | 'initiative' | null
 type Mode = 'manual' | 'upload'
 
 function getToken(): string {
@@ -431,9 +430,9 @@ function InitiativeForm({ onSubmit, submitting }: {
 
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default function AgentsPage() {
-  const [formType, setFormType]   = useState<FormType>(null)
+  const [showForm, setShowForm]     = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [result, setResult]       = useState<{ success: boolean; message: string; id?: string } | null>(null)
+  const [result, setResult]         = useState<{ success: boolean; message: string; id?: string } | null>(null)
 
   async function submitDonor(data: any, file: File | null, mode: Mode) {
     setSubmitting(true); setResult(null)
@@ -484,78 +483,10 @@ export default function AgentsPage() {
 
       setResult({
         success: true,
-        message: `✅ Donor requirement submitted! Type: 🏢 CSR / Donor. Added to Donors (CSR) dashboard. Agent pipeline started: Extraction → Gap Diagnoser → Matching. Requirement ID: ${reqData.data.requirementId}`,
+        message: `✅ Donor requirement submitted! Agent pipeline started: Extraction → Gap Diagnoser → Matching. Requirement ID: ${reqData.data.requirementId}`,
         id: reqData.data.requirementId,
       })
-      setFormType(null)
-    } catch {
-      setResult({ success: false, message: 'Network error. Please check the API server is running.' })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  async function submitInitiative(data: any, file: File | null, mode: Mode) {
-    setSubmitting(true); setResult(null)
-    try {
-      if (mode === 'upload' && file) {
-        // NGO upload → send file to server, AI extracts all fields
-        const formData = new FormData()
-        formData.append('file', file)
-        const token = getToken()
-        const uploadRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'}/api/initiatives/upload`,
-          { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData }
-        )
-        const res = await uploadRes.json()
-
-        if (!res.success) {
-          setResult({ success: false, message: res.error?.message ?? 'Failed to create NGO initiative from document' })
-          return
-        }
-
-        setResult({
-          success: true,
-          message: `✅ NGO Initiative uploaded! Type: 🏛 NGO. Added to NGO Initiatives dashboard. ID: ${res.data.id}. Embedding agent is running to make it discoverable for donor matching.`,
-          id: res.data.id,
-        })
-        setFormType(null)
-        return
-      }
-
-      // Manual mode → create initiative directly (Type: NGO → goes to NGO Initiatives dashboard)
-      const sdgTags = data.sdgAlignment
-        ? data.sdgAlignment.split(',').map((s: string) => s.trim()).filter(Boolean)
-        : ['SDG4']
-
-      const res = await api.post('/api/initiatives', {
-        title: data.initiativeTitle,
-        sector: data.sector,
-        geography: {
-          state: data.state || 'India',
-          district: data.district || undefined,
-          lat: data.gpsCoordinates ? parseFloat(data.gpsCoordinates.split(',')[0]) : 0,
-          lng: data.gpsCoordinates ? parseFloat(data.gpsCoordinates.split(',')[1]) : 0,
-        },
-        description: [data.briefDescription, data.detailedDescription].filter(Boolean).join('\n\n'),
-        targetBeneficiaries: parseInt(data.totalBeneficiaries) || 100,
-        budgetRequired: parseFloat(data.totalBudget) || 1000000,
-        sdgTags,
-        startDate: data.startDate ? new Date(data.startDate).toISOString() : undefined,
-        endDate: data.endDate ? new Date(data.endDate).toISOString() : undefined,
-      })
-
-      if (!res.success) {
-        setResult({ success: false, message: res.error?.message ?? 'Failed to create initiative' })
-        return
-      }
-
-      setResult({
-        success: true,
-        message: `✅ NGO Initiative submitted! Type: 🏛 NGO. Added to NGO Initiatives dashboard. ID: ${res.data.id}. Embedding agent is running.`,
-        id: res.data.id,
-      })
-      setFormType(null)
+      setShowForm(false)
     } catch {
       setResult({ success: false, message: 'Network error. Please check the API server is running.' })
     } finally {
@@ -566,77 +497,46 @@ export default function AgentsPage() {
   return (
     <div className="max-w-3xl">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Agent Jobs</h2>
+        <h2 className="text-xl font-semibold text-gray-900">CSR Intake</h2>
         <p className="text-sm text-gray-500 mt-0.5">
-          Submit donor requirements or NGO initiatives to trigger AI processing agents
+          Submit CSR donor requirements to trigger AI extraction, gap analysis and initiative matching
         </p>
       </div>
 
       {result && (
         <div className={`mb-6 rounded-xl border px-5 py-4 text-sm ${result.success ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
           <p className="font-medium">{result.message}</p>
-          {result.success && (
-            <p className="mt-1 text-xs opacity-70">
-              Go to the correct dashboard to track progress in real time.
-            </p>
-          )}
+          {result.success && <p className="mt-1 text-xs opacity-70">Go to CSR Review Panel to track progress in real time.</p>}
           <button onClick={() => setResult(null)} className="mt-2 text-xs underline opacity-70 hover:opacity-100">Dismiss</button>
         </div>
       )}
 
-      {!formType && (
+      {!showForm ? (
         <div>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-            Select what you want to submit
-          </p>
-          <div className="grid grid-cols-2 gap-4">
-            <button onClick={() => setFormType('donor')}
-              className="bg-white border-2 border-blue-200 hover:border-blue-500 rounded-xl p-6 text-left transition-all group cursor-pointer">
-              <div className="text-3xl mb-3">📋</div>
-              <h3 className="font-semibold text-gray-900 group-hover:text-blue-700 text-sm">Donor Requirements</h3>
-              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                Submit a CSR or individual donor requirement. Fill form manually or upload a document.
-              </p>
-              <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 border border-blue-300 px-2 py-0.5 rounded-md">
-                🏢 CSR / Donor
-              </div>
-              <div className="mt-2 text-xs text-blue-500">Agents: Extraction → Gap Diagnoser → Matching</div>
-            </button>
-
-            <button onClick={() => setFormType('initiative')}
-              className="bg-white border-2 border-green-200 hover:border-green-500 rounded-xl p-6 text-left transition-all group cursor-pointer">
-              <div className="text-3xl mb-3">🎯</div>
-              <h3 className="font-semibold text-gray-900 group-hover:text-green-700 text-sm">NGO Initiative</h3>
-              <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-                Submit a new NGO initiative. Fill form manually or upload a document.
-              </p>
-              <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-green-700 border border-green-300 px-2 py-0.5 rounded-md">
-                🏛 NGO
-              </div>
-              <div className="mt-2 text-xs text-green-500">Agents: Embedding → Discoverable for Matching</div>
-            </button>
-          </div>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Submit a donor requirement</p>
+          <button onClick={() => setShowForm(true)}
+            className="bg-white border-2 border-blue-200 hover:border-blue-500 rounded-xl p-6 text-left transition-all group cursor-pointer w-full max-w-sm">
+            <div className="text-3xl mb-3">📋</div>
+            <h3 className="font-semibold text-gray-900 group-hover:text-blue-700 text-sm">Donor / CSR Requirements</h3>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              Submit a CSR or individual donor requirement. Fill form manually or upload a document.
+            </p>
+            <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-blue-700 border border-blue-300 px-2 py-0.5 rounded-md">🏢 CSR / Donor</div>
+            <div className="mt-2 text-xs text-blue-500">Agents: Extraction → Gap Diagnoser → Matching</div>
+          </button>
         </div>
-      )}
-
-      {formType && (
+      ) : (
         <div>
           <div className="flex items-center gap-3 mb-5">
-            <button onClick={() => { setFormType(null); setResult(null) }}
+            <button onClick={() => { setShowForm(false); setResult(null) }}
               className="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1">
               ← Back
             </button>
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${
-              formType === 'donor'
-                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                : 'bg-green-50 text-green-700 border-green-200'
-            }`}>
-              {formType === 'donor' ? '🏢 Donor Requirements (CSR)' : '🏛 NGO Initiative'}
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-blue-50 text-blue-700 border-blue-200">
+              🏢 Donor Requirements (CSR)
             </span>
           </div>
-
-          {formType === 'donor'      && <DonorForm      onSubmit={submitDonor}      submitting={submitting} />}
-          {formType === 'initiative' && <InitiativeForm onSubmit={submitInitiative} submitting={submitting} />}
+          <DonorForm onSubmit={submitDonor} submitting={submitting} />
         </div>
       )}
     </div>

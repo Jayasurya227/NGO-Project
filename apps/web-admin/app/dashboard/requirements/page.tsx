@@ -61,9 +61,9 @@ export default function RequirementsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Requirements — AI Pipeline</h2>
+        <h2 className="text-xl font-semibold text-gray-900">DRM Workspace</h2>
         <p className="text-sm text-gray-500 mt-0.5">
-          Track every submission through AI extraction → DRM validation → Gap analysis → Initiative matching
+          Review and validate CSR submissions through AI extraction → DRM approval → Gap analysis → Initiative matching
         </p>
       </div>
 
@@ -157,17 +157,7 @@ export default function RequirementsPage() {
                     onClick={() => router.push(`/dashboard/requirements/${req.id}`)}
                     className={`transition-colors cursor-pointer ${needsAction ? 'hover:bg-orange-50 bg-orange-50/30' : 'hover:bg-gray-50'}`}>
                     <td className="px-4 py-3">
-                      {(req.extractedFields as any)?.companyName ? (
-                        <div>
-                          <p className="font-semibold text-gray-900">{(req.extractedFields as any).companyName}</p>
-                          <p className="text-[10px] text-green-600 font-medium">✓ Extracted from document</p>
-                        </div>
-                      ) : (
-                        <div>
-                          <p className="font-semibold text-gray-700">{req.donor?.orgName || 'Unknown'}</p>
-                          <p className="text-[10px] text-amber-600 font-medium">⚠ Not extracted — donor account name</p>
-                        </div>
-                      )}
+                      <p className="font-semibold text-gray-900">{fields?.companyName || req.donor?.orgName || 'Unknown'}</p>
                       {req.rawDocumentUrl && (
                         <p className="text-[10px] text-gray-400 mt-0.5 font-mono">
                           📄 {req.rawDocumentUrl.replace('uploaded:', '')}

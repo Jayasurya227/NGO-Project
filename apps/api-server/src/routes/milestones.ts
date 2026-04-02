@@ -171,6 +171,21 @@ export async function milestonesRoutes(app: FastifyInstance) {
         data: updateData,
       });
 
+      // Recalculate budgetFunded = sum of all COMPLETED milestones for this initiative
+      if (data.status !== undefined) {
+        const completedMilestones = await prisma.milestone.findMany({
+          where: { initiativeId, status: 'COMPLETED' },
+          select: { budgetAllocated: true },
+        });
+        const totalFunded = completedMilestones.reduce(
+          (sum, m) => sum + Number(m.budgetAllocated ?? 0), 0
+        );
+        await prisma.initiative.update({
+          where: { id: initiativeId },
+          data: { budgetFunded: totalFunded },
+        });
+      }
+
       return reply.send({
         success: true,
         data: milestone,

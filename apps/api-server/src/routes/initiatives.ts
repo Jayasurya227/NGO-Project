@@ -64,7 +64,7 @@ Return this exact JSON structure:
   "description": "2-3 sentence description of what this initiative does",
   "targetBeneficiaries": 500,
   "budgetRequired": 2500000,
-  "sdgTags": ["SDG4", "SDG10"],
+  "sdgTags": ["QUALITY_EDUCATION", "REDUCED_INEQUALITY"],
   "durationMonths": 12
 }
 
@@ -72,7 +72,7 @@ Rules:
 - sector must be one of: EDUCATION, HEALTHCARE, LIVELIHOOD, ENVIRONMENT, WATER_SANITATION, OTHER
 - budgetRequired in rupees (1 lakh = 100000, 1 crore = 10000000). Use 0 if not mentioned.
 - targetBeneficiaries is a number. Use 100 if not mentioned.
-- sdgTags: 1-3 SDG tags like SDG4, SDG3, SDG6, SDG13 etc. Infer from context.
+- sdgTags: 1-3 tags from: NO_POVERTY, ZERO_HUNGER, GOOD_HEALTH, QUALITY_EDUCATION, GENDER_EQUALITY, CLEAN_WATER, REDUCED_INEQUALITY. Infer from context.
 - If field not found, use reasonable defaults.
 - title: use "${fileName.replace(/\.[^.]+$/, "")}" if no clear title in the document.`;
 
@@ -129,9 +129,7 @@ export async function initiativesRoutes(app: FastifyInstance) {
     if (!fileBuffer) {
       return reply.status(400).send({ success: false, error: { code: "VALIDATION_ERROR", message: "File is required" } });
     }
-    if (fileName.toLowerCase().endsWith(".pdf") && fileText.trim().length < 50) {
-      return reply.status(400).send({ success: false, error: { code: "UNREADABLE_PDF", message: "PDF has no readable text. Please upload a text-based PDF or DOCX." } });
-    }
+    // Allow scanned PDFs — Gemini will read them via base64 multimodal
 
     // AI extraction
     const extracted = await extractInitiativeFieldsWithAI(fileText, fileName);
@@ -140,16 +138,23 @@ export async function initiativesRoutes(app: FastifyInstance) {
     const VALID_SECTORS = ["EDUCATION","HEALTHCARE","LIVELIHOOD","ENVIRONMENT","WATER_SANITATION","INFRASTRUCTURE","WOMEN_EMPOWERMENT","CHILD_WELFARE","OTHER"];
     const sector = VALID_SECTORS.includes(extracted?.sector) ? extracted.sector : "OTHER";
 
+    const VALID_SDGS = ["NO_POVERTY","ZERO_HUNGER","GOOD_HEALTH","QUALITY_EDUCATION","GENDER_EQUALITY","CLEAN_WATER","REDUCED_INEQUALITY"];
+    const SDG_MAP: Record<string, string> = { SDG1:"NO_POVERTY",SDG2:"ZERO_HUNGER",SDG3:"GOOD_HEALTH",SDG4:"QUALITY_EDUCATION",SDG5:"GENDER_EQUALITY",SDG6:"CLEAN_WATER",SDG10:"REDUCED_INEQUALITY" };
+    const sanitizedSdgTags = Array.isArray(extracted?.sdgTags)
+      ? extracted.sdgTags.map((t: string) => SDG_MAP[t] ?? (VALID_SDGS.includes(t) ? t : null)).filter(Boolean)
+      : [];
+    const sdgTags = sanitizedSdgTags.length > 0 ? sanitizedSdgTags : ["QUALITY_EDUCATION"];
+
     const initiative = await prisma.initiative.create({
       data: {
         tenantId,
         title:               extracted?.title       || fileName.replace(/\.[^.]+$/, ""),
         sector:              sector as any,
         geography:           { state: extracted?.state || "India", district: extracted?.district || "" },
-        description:         extracted?.description || fileText.slice(0, 1000) || `Uploaded from: ${fileName}`,
+        description:         extracted?.description || (fileText && !fileText.startsWith('%PDF') ? fileText.slice(0, 1000) : '') || `Uploaded from: ${fileName}`,
         targetBeneficiaries: Math.max(1, parseInt(extracted?.targetBeneficiaries) || 100),
         budgetRequired:      Math.max(1, parseFloat(extracted?.budgetRequired)    || 1000000),
-        sdgTags:             Array.isArray(extracted?.sdgTags) && extracted.sdgTags.length > 0 ? extracted.sdgTags : ["SDG4"],
+        sdgTags,
         status:              "ACTIVE",
       },
     });
@@ -192,6 +197,7 @@ export async function initiativesRoutes(app: FastifyInstance) {
           id: true, title: true, sector: true, status: true,
           geography: true, budgetRequired: true, budgetFunded: true,
           targetBeneficiaries: true, sdgTags: true, createdAt: true,
+          startDate: true, endDate: true, description: true,
           tenant: { select: { name: true } }
 
         },

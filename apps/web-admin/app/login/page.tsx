@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { saveSession } from '../../lib/auth'
 
@@ -12,9 +12,6 @@ export default function LoginPage() {
   const [subdomain, setSubdomain] = useState('shiksha-foundation')
   const [error, setError]         = useState('')
   const [loading, setLoading]     = useState(false)
-  const [mounted, setMounted]     = useState(false)
-
-  useEffect(() => setMounted(true), [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -44,8 +41,6 @@ export default function LoginPage() {
     }
     setLoading(false)
   }
-
-  if (!mounted) return null
 
   return (
     <div className="min-h-screen bg-[#f4f5f7] flex flex-col items-center justify-center px-4">

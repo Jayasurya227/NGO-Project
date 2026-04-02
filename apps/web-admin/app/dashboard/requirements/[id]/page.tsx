@@ -181,7 +181,7 @@ export default function RequirementDetailPage() {
             ← Back to Requirements
           </button>
           <h2 className="text-xl font-semibold text-gray-900">
-            {req.donor?.orgName ?? 'Individual Donor'} — Requirement
+            {req.extractedFields?.companyName || req.donor?.orgName || 'Individual Donor'} — Requirement
           </h2>
           <p className="text-xs text-gray-400 mt-0.5">ID: {req.id}</p>
         </div>
@@ -233,7 +233,7 @@ export default function RequirementDetailPage() {
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-4">
         <h3 className="text-sm font-semibold text-gray-900 mb-3">Submission Details</h3>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <div><p className="text-xs text-gray-400 mb-0.5">Donor</p><p className="font-medium">{req.donor?.orgName ?? 'Individual'}</p></div>
+          <div><p className="text-xs text-gray-400 mb-0.5">Donor</p><p className="font-medium">{fields?.companyName || req.donor?.orgName || 'Individual'}</p></div>
           <div><p className="text-xs text-gray-400 mb-0.5">Donor Type</p><p className="font-medium">{req.donor?.type ?? '—'}</p></div>
           <div><p className="text-xs text-gray-400 mb-0.5">Document Uploaded</p><p className="font-medium">{req.rawDocumentUrl ? '📄 Yes' : '— None'}</p></div>
           <div><p className="text-xs text-gray-400 mb-0.5">Created</p><p className="font-medium">{format(new Date(req.createdAt), 'dd MMM yyyy HH:mm')}</p></div>

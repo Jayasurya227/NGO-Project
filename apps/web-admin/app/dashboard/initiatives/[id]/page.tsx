@@ -132,13 +132,20 @@ export default function InitiativeDetailPage() {
           icon={Flag}
           color="amber"
         />
-        <StatCard 
-          label="SDG Tags" 
-          value={initiative.sdgTags?.join(', ')} 
-          sub="Sustainable Development Goals"
-          icon={Bookmark}
-          color="purple"
-        />
+        <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4 border bg-purple-50 text-purple-600 border-purple-100">
+            <Bookmark className="w-5 h-5" />
+          </div>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">SDG Tags</p>
+          <div className="flex flex-wrap gap-1.5">
+            {initiative.sdgTags?.map((tag: string) => (
+              <span key={tag} className="px-2.5 py-1 bg-purple-50 text-purple-700 text-xs font-semibold rounded-full border border-purple-200">
+                {tag.replace(/_/g, ' ')}
+              </span>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500 mt-2">Sustainable Development Goals</p>
+        </div>
       </div>
 
       {/* Matched CSR Donors */}

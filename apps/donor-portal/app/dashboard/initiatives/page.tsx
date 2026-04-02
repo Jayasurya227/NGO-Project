@@ -6,20 +6,15 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 const SDG_MAP: Record<string, string> = {
-  'NO_POVERTY': 'SDG 1: No Poverty',
-  'ZERO_HUNGER': 'SDG 2: Zero Hunger',
-  'GOOD_HEALTH': 'SDG 3: Good Health',
-  'QUALITY_EDUCATION': 'SDG 4: Quality Education',
-  'GENDER_EQUALITY': 'SDG 5: Gender Equality',
-  'CLEAN_WATER': 'SDG 6: Clean Water',
-  'REDUCED_INEQUALITY': 'SDG 10: Reduced Inequality',
-  'SDG4': 'SDG 4: Quality Education',
-  'SDG1': 'SDG 1: No Poverty',
-  'SDG2': 'SDG 2: Zero Hunger',
-  'SDG3': 'SDG 3: Good Health',
-  'SDG5': 'SDG 5: Gender Equality',
-  'SDG6': 'SDG 6: Clean Water',
-  'SDG10': 'SDG 10: Reduced Inequality'
+  'NO_POVERTY': 'SDG 1',
+  'ZERO_HUNGER': 'SDG 2',
+  'GOOD_HEALTH': 'SDG 3',
+  'QUALITY_EDUCATION': 'SDG 4',
+  'GENDER_EQUALITY': 'SDG 5',
+  'CLEAN_WATER': 'SDG 6',
+  'REDUCED_INEQUALITY': 'SDG 10',
+  'SDG1': 'SDG 1', 'SDG2': 'SDG 2', 'SDG3': 'SDG 3',
+  'SDG4': 'SDG 4', 'SDG5': 'SDG 5', 'SDG6': 'SDG 6', 'SDG10': 'SDG 10',
 };
 
 const SECTOR_MAP: Record<string, string> = {
@@ -41,7 +36,7 @@ export default function DonorInitiativesPage() {
     queryKey: ['donor-initiatives'],
     queryFn: async () => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch('http://localhost:4000/api/initiatives', {
+      const res = await fetch('http://localhost:4000/api/initiatives?limit=100', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to fetch');
@@ -131,7 +126,9 @@ export default function DonorInitiativesPage() {
                 
                 <div className="p-6 flex-1 flex flex-col">
                   <p className="text-slate-500 text-xs line-clamp-2 mb-4">
-                    {init.description || "Building sustainable impact through community-led development and resource optimization."}
+                    {(init.description?.startsWith('%PDF') || init.description?.includes('endobj'))
+                      ? 'Building sustainable impact through community-led development and resource optimization.'
+                      : (init.description || 'Building sustainable impact through community-led development and resource optimization.')}
                   </p>
 
                   <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4">
@@ -159,8 +156,8 @@ export default function DonorInitiativesPage() {
 
                     <div className="flex flex-wrap gap-1.5">
                       {init.sdgTags?.map((tag: string) => (
-                        <span key={tag} className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold border border-slate-100 rounded">
-                          {SDG_MAP[tag] || `#${tag}`}
+                        <span key={tag} className="w-14 text-center py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold border border-slate-100 rounded">
+                          {SDG_MAP[tag] || tag}
                         </span>
                       ))}
                     </div>

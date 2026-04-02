@@ -320,7 +320,21 @@ export async function requirementsRoutes(app: FastifyInstance) {
       orderBy: { createdAt: "desc" },
     });
 
-    return reply.send({ success: true, data: artifacts });
+    // Enrich with initiative name from top match
+    const enriched = await Promise.all(artifacts.map(async (a) => {
+      const topMatch = await prisma.matchResult.findFirst({
+        where: { requirementId: a.relatedEntityId },
+        include: { initiative: { select: { title: true, tenant: { select: { name: true } } } } },
+        orderBy: { rank: 'asc' },
+      });
+      return {
+        ...a,
+        initiativeTitle: topMatch?.initiative?.title ?? null,
+        ngoName: topMatch?.initiative?.tenant?.name ?? null,
+      };
+    }));
+
+    return reply.send({ success: true, data: enriched });
   });
 
   // GET /:id
@@ -332,7 +346,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
       where: { id, tenantId },
       include: {
         donor: { select: { id: true, type: true, orgName: true } },
-        matchResults: { select: { id: true, rank: true, overallScore: true }, orderBy: { rank: "asc" }, take: 5 },
+        matchResults: { select: { id: true, rank: true, overallScore: true, initiative: { select: { targetBeneficiaries: true } } }, orderBy: { rank: "asc" }, take: 5 },
         _count: { select: { matchResults: true } },
       },
     });
