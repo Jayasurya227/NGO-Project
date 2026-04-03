@@ -6,6 +6,8 @@ describe("ExtractionSchema", () => {
     const mockResult = {
       sector: "EDUCATION",
       sectorConfidence: 0.95,
+      companyName: "Infosys Foundation",
+      companyNameConf: 0.95,
       geography: { state: "Maharashtra", stateConf: 0.9, districts: ["Wardha"], districtsConf: 0.8 },
       budget: { minInr: 3500000, maxInr: 5000000, conf: 0.95 },
       durationMonths: { value: 18, conf: 0.95 },
@@ -40,6 +42,8 @@ describe("ExtractionSchema", () => {
     const result = ExtractionSchema.parse({
       sector: "EDUCATION",
       sectorConfidence: 0.9,
+      companyName: "TCS Ltd",
+      companyNameConf: 0.9,
       geography: { state: "Maharashtra", stateConf: 0.9, districts: [], districtsConf: 0.5 },
       budget: { minInr: 100000, maxInr: 500000, conf: 0.8 },
       durationMonths: { value: 12, conf: 0.85 },

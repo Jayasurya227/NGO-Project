@@ -16,19 +16,35 @@ export default function ContentDetailPage() {
   async function handleDownload() {
     setDownloading(true);
     try {
-      const res = await fetch(`http://localhost:4000/api/content/${id}/download`, {
-        headers: { 'Authorization': `Bearer ${getSession()?.accessToken}` },
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+      const session = getSession();
+      if (!session?.accessToken) {
+        toast.error('Session expired — please log in again');
+        return;
+      }
+      const res = await fetch(`${apiUrl}/api/content/${id}/download`, {
+        headers: { 'Authorization': `Bearer ${session.accessToken}` },
       });
-      if (!res.ok) throw new Error('Download failed');
+      if (res.status === 404) {
+        toast.error('File not found on server — the pitch deck may still be generating');
+        return;
+      }
+      if (!res.ok) {
+        toast.error(`Download failed (${res.status})`);
+        return;
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `pitch-deck-${id}.pptx`;
+      a.style.display = 'none';
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      toast.error('Download failed');
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    } catch (err) {
+      toast.error('Download failed — check your connection');
     } finally {
       setDownloading(false);
     }
@@ -117,10 +133,10 @@ export default function ContentDetailPage() {
           </div>
           <button
             onClick={handleDownload}
-            disabled={!item.downloadUrl || downloading}
+            disabled={downloading}
             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex-shrink-0"
           >
-            {downloading ? 'Downloading...' : 'Download PPTX ↓'}
+            {downloading ? 'Downloading...' : 'Download ↓'}
           </button>
         </div>
       </div>
@@ -129,7 +145,7 @@ export default function ContentDetailPage() {
       {/* Approval action — only shown for PENDING_REVIEW */}
       {isPending && (
         <div className="border-t border-slate-200 pt-5">
-          <h2 className="text-sm font-semibold text-slate-700 mb-3">DRM Review Decision</h2>
+          <h2 className="text-sm font-semibold text-slate-700 mb-3">Program Manager Review Decision</h2>
 
           <div className="mb-4">
             <label className="block text-xs font-medium text-slate-600 mb-1">

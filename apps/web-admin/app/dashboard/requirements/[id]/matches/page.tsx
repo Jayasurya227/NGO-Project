@@ -7,16 +7,22 @@ import { SubScoreChart } from '@/components/SubScoreChart';
 import toast from 'react-hot-toast';
 
 function OverallScoreBadge({ score }: { score: number }) {
-  const colour = score >= 75
-    ? 'bg-emerald-100 text-emerald-800 border-emerald-300 ring-emerald-200'
-    : score >= 50
-    ? 'bg-amber-100 text-amber-800 border-amber-300 ring-amber-200'
-    : 'bg-red-100 text-red-800 border-red-300 ring-red-200';
+  const isStrong = score >= 75;
+  const isOk     = score >= 50;
+
+  const ring  = isStrong ? 'border-emerald-300 ring-emerald-100 bg-emerald-50'
+              : isOk     ? 'border-amber-300 ring-amber-100 bg-amber-50'
+              :             'border-red-300 ring-red-100 bg-red-50';
+
+  const label = isStrong ? { text: 'Great Fit',  colour: 'text-emerald-700' }
+              : isOk     ? { text: 'Decent Fit', colour: 'text-amber-700'   }
+              :             { text: 'Weak Fit',   colour: 'text-red-700'     };
 
   return (
-    <div className={`w-14 h-14 rounded-full border-2 flex flex-col items-center justify-center flex-shrink-0 ${colour} ring-4`}>
-      <span className="text-base font-bold leading-none">{score}</span>
-      <span className="text-xs leading-none mt-0.5 opacity-60">/ 100</span>
+    <div className={`w-16 rounded-xl border-2 ring-4 flex flex-col items-center justify-center py-2 flex-shrink-0 ${ring}`}>
+      <span className={`text-lg font-extrabold leading-none ${label.colour}`}>{score}</span>
+      <span className="text-[9px] text-slate-400 leading-none mt-0.5">out of 100</span>
+      <span className={`text-[10px] font-bold mt-1 ${label.colour}`}>{label.text}</span>
     </div>
   );
 }
@@ -146,8 +152,10 @@ export default function MatchResultsPage() {
                 {/* Card header */}
                 <div className="px-5 py-4 flex items-start gap-4">
                   {/* Rank + reorder */}
-                  <div className="flex flex-col items-center gap-1 pt-1">
-                    <span className="text-xs font-bold text-slate-400">#{idx + 1}</span>
+                  <div className="flex flex-col items-center gap-1 pt-1 min-w-[44px]">
+                    <span className="text-[10px] font-bold text-center leading-tight text-slate-500">
+                      {idx === 0 ? '🥇 Best' : idx === 1 ? '🥈 2nd' : idx === 2 ? '🥉 3rd' : `#${idx + 1}`}
+                    </span>
                     <button onClick={() => moveUp(idx)} disabled={idx === 0}
                       className="text-slate-300 hover:text-slate-700 disabled:opacity-20 leading-none text-sm">▲</button>
                     <button onClick={() => moveDown(idx)} disabled={idx === orderedMatches.length - 1}
@@ -166,12 +174,14 @@ export default function MatchResultsPage() {
                       )}
                     </div>
 
-                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-slate-500 mb-2">
-                      <span>📍 {geo.state ?? 'Multiple states'}</span>
-                      <span>📂 {init.sector}</span>
-                      <span>💰 ₹{gapL}L funding gap</span>
-                      <span>👥 {init.targetBeneficiaries?.toLocaleString('en-IN')} beneficiaries</span>
-                      <span>✅ {init.completedMilestones}/{init.totalMilestones} milestones</span>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded-full">📍 {geo.state ?? 'Multiple states'}</span>
+                      <span className="bg-slate-100 text-slate-700 text-xs px-2 py-0.5 rounded-full">📂 {init.sector.replace(/_/g, ' ')}</span>
+                      <span className="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full">💰 Needs ₹{gapL}L more funding</span>
+                      <span className="bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full">👥 {init.targetBeneficiaries?.toLocaleString('en-IN')} people to be helped</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${init.completedMilestones === init.totalMilestones && init.totalMilestones > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                        ✅ {init.completedMilestones} of {init.totalMilestones} tasks done
+                      </span>
                     </div>
 
                     {/* AI explanation — visible but clearly labelled as AI-generated */}
@@ -185,8 +195,8 @@ export default function MatchResultsPage() {
                     {/* Expandable sub-score chart */}
                     <details className="group">
                       <summary className="text-xs text-blue-600 cursor-pointer hover:text-blue-800 font-medium list-none">
-                        <span className="group-open:hidden">▶ Show score breakdown</span>
-                        <span className="hidden group-open:inline">▼ Hide score breakdown</span>
+                        <span className="group-open:hidden">▶ Why this score? See details</span>
+                        <span className="hidden group-open:inline">▼ Hide details</span>
                       </summary>
                       <div className="mt-3">
                         <SubScoreChart subScores={match.subScores} />

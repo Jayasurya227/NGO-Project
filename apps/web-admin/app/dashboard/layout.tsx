@@ -17,15 +17,15 @@ const navGroups = [
   {
     label: 'Management',
     items: [
-      { href: '/dashboard/inquiries',    label: 'Donor Inquiries',     icon: Activity },
       { href: '/dashboard/initiatives',  label: 'NGO Initiatives',     icon: Landmark },
-      { href: '/dashboard/requirements', label: 'Requirements',        icon: FileText },
+      { href: '/dashboard/requirements', label: 'DRM Workspace',        icon: FileText },
+      { href: '/dashboard/inquiries',    label: 'Donor Inquiries',     icon: Activity },
     ]
   },
   {
     label: 'AI & Matching',
     items: [
-      { href: '/dashboard/content',     label: 'Content & Approvals',  icon: FileCheck },
+      { href: '/dashboard/content',     label: 'Proposal Approvals',  icon: FileCheck },
       { href: '/dashboard/agents',      label: 'Agent Jobs',           icon: BarChart2 },
     ]
   }
@@ -67,8 +67,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="text-white text-[9px] font-bold tracking-tight">NGO</span>
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-900 leading-none truncate">NGO Impact</p>
-            <p className="text-[11px] text-slate-400 font-medium tracking-wider uppercase mt-0.5">Admin Portal</p>
+            <p className="text-sm font-semibold text-slate-900 leading-none truncate">Impact Platform</p>
+            <p className="text-[11px] text-slate-400 font-medium tracking-wider uppercase mt-0.5">Admin Console</p>
           </div>
         </div>
 

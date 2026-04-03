@@ -15,7 +15,7 @@ function loadEnv() {
 }
 loadEnv();
 
-import { runGapDiagnoser } from "./packages/agents/src/gap-diagnoser/index";
+import { runMatchingAgent } from "./packages/agents/src/matching/index";
 import { prisma } from "@ngo/database";
 
 const REQ_ID = "4eac03ce-4aa3-41ef-8f96-680bd7f4e21e";
@@ -26,15 +26,16 @@ async function main() {
   });
   if (!tenant) throw new Error("No tenant found");
 
-  console.log("Running Gap Diagnoser on:", REQ_ID);
+  console.log("Running Matching Agent on:", REQ_ID);
   console.log("-".repeat(60));
 
-  const report = await runGapDiagnoser({ requirementId: REQ_ID, tenantId: tenant.id });
-  console.log("\nGap Report:", JSON.stringify(report, null, 2));
+  const result = await runMatchingAgent({ requirementId: REQ_ID, tenantId: tenant.id });
+  console.log("\nMatching Result:", JSON.stringify(result, null, 2));
+
   await prisma.$disconnect();
 }
 
 main().catch((err) => {
-  console.error("Error:", err);
+  console.error("Error:", err.message);
   process.exit(1);
 });

@@ -22,11 +22,17 @@ class GapAnalysisWorker extends BaseAgentWorker<GapAnalysisPayload> {
     const report = await runGapDiagnoser({ requirementId, tenantId });
 
     // Automatically queue matching after gap analysis completes
-    await queues.initiativeMatching.add(
+    const matchJob = await queues.initiativeMatching.add(
       "match",
       { requirementId, tenantId },
       DEFAULT_JOB_OPTIONS
     );
+
+    await prisma.agentJobLog.upsert({
+      where: { jobId: matchJob.id! },
+      update: { status: "QUEUED" },
+      create: { tenantId, jobId: matchJob.id!, agentName: "initiative-matching", status: "QUEUED" },
+    });
 
     console.log(`[gap-diagnoser] Matching job queued for: ${requirementId}`);
 

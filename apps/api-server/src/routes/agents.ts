@@ -17,7 +17,7 @@ export async function agentRoutes(app: FastifyInstance) {
     const page = Number((req.query as any).page) || 1;
     const limit = Number((req.query as any).limit) || 20;
 
-    const [jobs, total] = await Promise.all([
+    const [jobs, total, distinctAgentRows] = await Promise.all([
       prisma.agentJobLog.findMany({
         where: { tenantId },
         orderBy: { createdAt: "desc" },
@@ -25,12 +25,24 @@ export async function agentRoutes(app: FastifyInstance) {
         take: limit,
       }),
       prisma.agentJobLog.count({ where: { tenantId } }),
+      prisma.agentJobLog.findMany({
+        where: { tenantId },
+        select: { agentName: true },
+        distinct: ["agentName"],
+      }),
     ]);
 
     return reply.send({
       success: true,
       data: jobs,
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        distinctAgents: distinctAgentRows.length,
+        agentNames: distinctAgentRows.map(r => r.agentName),
+      },
     });
   });
 

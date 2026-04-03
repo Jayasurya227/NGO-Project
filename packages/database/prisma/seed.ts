@@ -51,6 +51,21 @@ async function main() {
     },
   });
 
+  await prisma.user.upsert({
+    where: { id: "seed-user-pm-a" },
+    update: {},
+    create: {
+      id: "seed-user-pm-a",
+      tenantId: tenantA.id,
+      email: "pm@shiksha.test",
+      emailHash: hashForLookup("pm@shiksha.test"),
+      fullNameEnc: await encrypt("Ananya Krishnan"),
+      passwordHash,
+      role: "PROGRAM_MANAGER",
+      status: "ACTIVE",
+    },
+  });
+
   const init1 = await prisma.initiative.upsert({
     where: { id: "seed-init-1" },
     update: {},
@@ -178,8 +193,9 @@ async function main() {
 
   console.log("Seeded " + (initiativesToSeed.length + 1) + " initiatives");
   console.log("Seed complete. Test credentials:");
-  console.log("   Admin: admin@shiksha.test / TestPass123!");
-  console.log("   DRM:   drm@shiksha.test / TestPass123!");
+  console.log("   Admin:           admin@shiksha.test / TestPass123!");
+  console.log("   DRM:             drm@shiksha.test   / TestPass123!");
+  console.log("   Program Manager: pm@shiksha.test    / TestPass123!");
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

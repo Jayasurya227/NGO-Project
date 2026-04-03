@@ -1,19 +1,52 @@
-import OpenAI from "openai";
+import { readFileSync } from "fs";
+import { resolve } from "path";
+
+function loadEnv() {
+  const candidates = [
+    resolve(process.cwd(), ".env"),
+    resolve(process.cwd(), "../../.env"),
+    resolve(process.cwd(), "../../../.env"),
+  ];
+  for (const envPath of candidates) {
+    try {
+      const content = readFileSync(envPath, "utf-8");
+      for (const line of content.split(/\r?\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith("#")) continue;
+        const eqIndex = trimmed.indexOf("=");
+        if (eqIndex === -1) continue;
+        const key = trimmed.slice(0, eqIndex).trim();
+        const value = trimmed.slice(eqIndex + 1).trim();
+        if (key) process.env[key] = value;
+      }
+      break;
+    } catch {}
+  }
+}
+loadEnv();
+
 import { prisma } from "@ngo/database";
 
-const client = new OpenAI({
-  apiKey: process.env.AZURE_OPENAI_API_KEY,
-  baseURL: `${process.env.AZURE_OPENAI_ENDPOINT}openai/deployments/${process.env.AZURE_OPENAI_DEPLOYMENT}`,
-  defaultHeaders: { "api-key": process.env.AZURE_OPENAI_API_KEY },
-  defaultQuery: { "api-version": process.env.AZURE_OPENAI_API_VERSION },
-});
-
 export async function embedText(text: string): Promise<number[]> {
-  const response = await client.embeddings.create({
-    model: process.env.AZURE_OPENAI_DEPLOYMENT ?? "text-embedding-3-large",
-    input: text.slice(0, 8000),
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not set — cannot generate embeddings");
+
+  const model = process.env.GOOGLE_EMBEDDING_MODEL ?? "gemini-embedding-001";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:embedContent?key=${apiKey}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: `models/${model}`, content: { parts: [{ text }] } }),
   });
-  return response.data[0].embedding;
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Embedding API error ${res.status}: ${err}`);
+  }
+
+  const data = await res.json() as { embedding: { values: number[] } };
+  return data.embedding.values;
 }
 
 export function buildInitiativeEmbeddingText(initiative: {
@@ -50,9 +83,9 @@ export async function embedAndSaveInitiative(initiativeId: string): Promise<void
   });
 
   const vector = await embedText(text);
+  const vectorString = `[${vector.join(",")}]`;
 
- const vectorString = `[${vector.join(",")}]`;
-await prisma.$executeRawUnsafe(
-  `UPDATE "Initiative" SET "embeddingVector" = '${vectorString}'::vector WHERE id = '${initiativeId}'`
-);
+  await prisma.$executeRawUnsafe(
+    `UPDATE "Initiative" SET "embeddingVector" = '${vectorString}'::vector WHERE id = '${initiativeId}'`
+  );
 }

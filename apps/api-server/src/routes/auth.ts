@@ -61,7 +61,7 @@ export async function authRoutes(app: FastifyInstance) {
     const accessToken = jwt.sign(
       { userId: user.id, role: user.role, tenantId: user.tenantId },
       process.env.JWT_SECRET ?? "dev_jwt_secret_change_in_production_must_be_64_chars_minimum_ok",
-      { expiresIn: "8h" }
+      { expiresIn: "30d" }
     );
 
     return reply.send({
@@ -113,7 +113,7 @@ export async function authRoutes(app: FastifyInstance) {
     const accessToken = jwt.sign(
       { userId: donor.id, tenantId: tenant.id, role: 'DONOR', donorId: donor.id },
       process.env.JWT_SECRET ?? "dev_jwt_secret_change_in_production_must_be_64_chars_minimum_ok",
-      { expiresIn: '8h' }
+      { expiresIn: '30d' }
     );
 
     return reply.send({

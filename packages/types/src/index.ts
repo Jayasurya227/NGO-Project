@@ -56,6 +56,7 @@ export type ReceiptGenerationPayload = { donationId: string; tenantId: string };
 // WEBSOCKET EVENTS
 export type WsEvent =
   | { type: "REQUIREMENT_EXTRACTED"; requirementId: string; requiresReview: boolean; lowConfidenceFields: string[] }
+  | { type: "GAP_ANALYSIS_COMPLETE"; entityType: string; entityId: string }
   | { type: "MATCH_RESULTS_READY"; requirementId: string; matchCount: number }
   | { type: "PITCH_DECK_READY"; contentArtifactId: string; fileUrl: string; requirementId: string }
   | { type: "EVIDENCE_VERIFIED"; evidenceId: string; milestoneId: string; score: number; flags: string[]; requiresReview: boolean }

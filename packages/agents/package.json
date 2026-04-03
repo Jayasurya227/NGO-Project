@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "main": "./src/index.ts",
   "exports": {
-    ".": "./src/index.ts",
-    "./utils/embeddings": "./src/utils/embeddings.ts"
-  },
+  ".": "./src/index.ts",
+  "./utils/embeddings": "./src/utils/embeddings.ts",
+  "./pitch-deck/index": "./src/pitch-deck/index.ts",
+  "./matching": "./src/matching/index.ts"
+},
   "scripts": {
     "build": "tsc",
     "test": "vitest"
@@ -20,9 +22,14 @@
     "@ngo/database": "workspace:*",
     "@ngo/queue": "workspace:*",
     "@ngo/storage": "workspace:*",
+    "dotenv": "^16.0.0",
     "imghash": "^1.1.2",
     "openai": "^4.28.0",
     "pdfkit": "^0.15.0",
     "pptxgenjs": "^3.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "vitest": "^2.1.0"
   }
 }

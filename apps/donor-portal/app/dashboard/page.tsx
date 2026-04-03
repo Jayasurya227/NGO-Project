@@ -63,15 +63,34 @@ export default function DonorDashboardPage() {
     }
   });
 
-  const stats = [
-    { label: 'Active Initiatives', value: '0', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Impact Milestones', value: '0', icon: CheckCircle2, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Lives Impacted', value: '0', icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
-  ];
+  const { data: initiativesData } = useQuery({
+    queryKey: ['initiatives-stats'],
+    queryFn: async () => {
+      const token = localStorage.getItem('donorAccessToken');
+      const res = await fetch('http://localhost:4000/api/initiatives?limit=100', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      return res.json();
+    }
+  });
 
   const stories = storiesData?.data || [];
-  const requirements = reqsData?.data || [];
-  const pitchDecks = pitchDecksData?.data || [];
+  const requirements: any[] = reqsData?.data || [];
+  const pitchDecks = (pitchDecksData?.data || []).filter((d: any) => d.approvalStatus === 'APPROVED');
+
+  const allInitiatives: any[] = initiativesData?.data || [];
+  const activeInitiatives = allInitiatives.filter((i: any) => i.status === 'ACTIVE').length;
+  const totalMilestones   = requirements.reduce((acc: number, r: any) => acc + (r.matchCount ?? 0), 0);
+  const livesImpacted     = requirements.reduce((acc: number, r: any) => {
+    const matches = r.topMatches ?? [];
+    return acc + matches.reduce((s: number, m: any) => s + (m.initiative?.targetBeneficiaries ?? 0), 0);
+  }, 0);
+
+  const stats = [
+    { label: 'Active Initiatives', value: activeInitiatives.toString(), icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Impact Milestones',  value: totalMilestones.toString(),   icon: CheckCircle2, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Lives Impacted',     value: livesImpacted.toLocaleString('en-IN'), icon: Users, color: 'text-violet-600', bg: 'bg-violet-50' },
+  ];
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
@@ -94,7 +113,6 @@ export default function DonorDashboardPage() {
             <p className="text-sm font-medium text-slate-500 mb-1">{stat.label}</p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-slate-900">{stat.value}</span>
-              <span className="text-xs text-slate-400 font-medium">Coming Soon</span>
             </div>
           </div>
         ))}
@@ -243,7 +261,7 @@ export default function DonorDashboardPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-900">Your Pitch Decks</h2>
-              <span className="text-slate-400 text-xs font-medium">{pitchDecks.length} Total</span>
+              <span className="text-slate-400 text-xs font-medium">{pitchDecks.length} Approved</span>
             </div>
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
               {pitchDecks.length === 0 ? (
@@ -261,7 +279,8 @@ export default function DonorDashboardPage() {
                             <FileText className={`w-4 h-4 ${isApproved ? 'text-emerald-600' : 'text-amber-500'}`} />
                           </div>
                           <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-900 truncate">Impact Partnership Proposal</p>
+                            <p className="text-xs font-bold text-slate-900 truncate">{deck.initiativeTitle ?? 'Impact Partnership Proposal'}</p>
+                          {deck.ngoName && <p className="text-[10px] text-slate-500 truncate">{deck.ngoName}</p>}
                             <p className="text-[10px] mt-0.5 flex items-center gap-1">
                               {isApproved ? (
                                 <>

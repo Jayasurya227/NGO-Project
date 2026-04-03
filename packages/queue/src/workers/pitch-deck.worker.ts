@@ -3,6 +3,7 @@ import { Job } from "bullmq";
 import { BaseAgentWorker } from "../base-worker";
 import { runPitchDeckAgent } from "@ngo/agents/pitch-deck/index";
 import { queues } from "../queues";
+import { emitWsEvent } from "../ws-emit";
 import { prisma } from "@ngo/database";
 
 type PitchDeckPayload = {
@@ -28,6 +29,13 @@ class PitchDeckWorker extends BaseAgentWorker<PitchDeckPayload> {
     });
 
     console.log(`[pitch-deck] Complete — artifact: ${result.contentArtifactId}`);
+
+    await emitWsEvent(tenantId, {
+      type:               "PITCH_DECK_READY",
+      contentArtifactId: result.contentArtifactId,
+      fileUrl:            result.fileUrl,
+      requirementId,
+    });
   }
 }
 
@@ -38,7 +46,7 @@ async function recoverPendingPitchDecks() {
       where: {
         type:           'PITCH_DECK',
         approvalStatus: 'PENDING_REVIEW',
-        fileUrl:        { startsWith: 'local://' },
+        fileUrl:        { not: null },
       },
       select: { id: true, relatedEntityId: true, tenantId: true, content: true },
     });

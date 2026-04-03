@@ -1,6 +1,5 @@
 import { readFileSync } from "fs";
 import { resolve } from "path";
-
 function loadEnv() {
   const content = readFileSync(resolve(process.cwd(), ".env"), "utf-8");
   for (const line of content.split(/\r?\n/)) {
@@ -15,26 +14,15 @@ function loadEnv() {
 }
 loadEnv();
 
-import { runGapDiagnoser } from "./packages/agents/src/gap-diagnoser/index";
 import { prisma } from "@ngo/database";
 
-const REQ_ID = "4eac03ce-4aa3-41ef-8f96-680bd7f4e21e";
-
 async function main() {
-  const tenant = await prisma.tenant.findFirst({
-    where: { subdomain: "shiksha-foundation" },
-  });
-  if (!tenant) throw new Error("No tenant found");
-
-  console.log("Running Gap Diagnoser on:", REQ_ID);
-  console.log("-".repeat(60));
-
-  const report = await runGapDiagnoser({ requirementId: REQ_ID, tenantId: tenant.id });
-  console.log("\nGap Report:", JSON.stringify(report, null, 2));
+  const total = await prisma.initiative.count();
+  const withEmbed = await prisma.$queryRaw`SELECT COUNT(*) as c FROM "Initiative" WHERE "embeddingVector" IS NOT NULL` as any[];
+  const sample = await prisma.$queryRaw`SELECT id, title, vector_dims("embeddingVector") as dims FROM "Initiative" WHERE "embeddingVector" IS NOT NULL LIMIT 3` as any[];
+  console.log("Total initiatives:", total);
+  console.log("With embeddings:", withEmbed[0]?.c?.toString());
+  console.log("Sample dims:", sample);
   await prisma.$disconnect();
 }
-
-main().catch((err) => {
-  console.error("Error:", err);
-  process.exit(1);
-});
+main().catch(console.error);

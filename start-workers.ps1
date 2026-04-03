@@ -1,14 +1,23 @@
 Write-Host "Starting all AI workers..." -ForegroundColor Cyan
-cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform\apps\api-server
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform\apps\api-server; .\node_modules\.bin\tsx ..\..\packages\queue\src\workers\requirement-extraction.worker.ts"
-Start-Sleep -Seconds 1
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform\apps\api-server; .\node_modules\.bin\tsx ..\..\packages\queue\src\workers\gap-analysis.worker.ts"
+
+$root = "C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform"
+$apiServerDir = "$root\apps\api-server"
+$workersDir = "$root\packages\queue\src\workers"
+
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$apiServerDir'; npx tsx '$workersDir\requirement-extraction.worker.ts'"
 Start-Sleep -Seconds 1
 
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$apiServerDir'; npx tsx '$workersDir\gap-analysis.worker.ts'"
 Start-Sleep -Seconds 1
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd $apiServerDir; npx tsx $workersDir/initiative-embedding.worker.ts"
+
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$apiServerDir'; npx tsx '$workersDir\initiative-matching.worker.ts'"
 Start-Sleep -Seconds 1
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd $apiServerDir; npx tsx $workersDir/pitch-deck.worker.ts"
+
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$apiServerDir'; npx tsx '$workersDir\initiative-embedding.worker.ts'"
+Start-Sleep -Seconds 1
+
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$apiServerDir'; npx tsx '$workersDir\pitch-deck.worker.ts'"
+Start-Sleep -Seconds 1
 
 Write-Host ""
 Write-Host "All 5 workers started in separate windows." -ForegroundColor Green
@@ -16,4 +25,4 @@ Write-Host "Requirement Extraction Worker  - running" -ForegroundColor Green
 Write-Host "Gap Analysis Worker            - running" -ForegroundColor Green
 Write-Host "Initiative Matching Worker     - running" -ForegroundColor Green
 Write-Host "Initiative Embedding Worker    - running" -ForegroundColor Green
-
+Write-Host "Pitch Deck Worker              - running" -ForegroundColor Green

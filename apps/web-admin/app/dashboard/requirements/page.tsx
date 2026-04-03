@@ -41,8 +41,8 @@ export default function RequirementsPage() {
 
   useEffect(() => {
     api.get('/api/requirements?limit=100').then(r => {
-      setRequirements(r.data ?? [])
-      setTotal(r.meta?.total ?? 0)
+      setRequirements(r.data?.requirements ?? [])
+      setTotal(r.data?.total ?? 0)
       setLoading(false)
     })
   }, [])
@@ -61,9 +61,9 @@ export default function RequirementsPage() {
   return (
     <div>
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Requirements — AI Pipeline</h2>
+        <h2 className="text-xl font-semibold text-gray-900">DRM Workspace</h2>
         <p className="text-sm text-gray-500 mt-0.5">
-          Track every submission through AI extraction → DRM validation → Gap analysis → Initiative matching
+          Review and validate CSR submissions through AI extraction → DRM approval → Gap analysis → Initiative matching
         </p>
       </div>
 
@@ -75,16 +75,11 @@ export default function RequirementsPage() {
       </div>
 
       {/* Pipeline stats */}
-      <div className="grid grid-cols-4 gap-3 mb-5">
+      <div className="grid grid-cols-3 gap-3 mb-5">
         <button onClick={() => setFilter('all')}
           className={`rounded-xl border p-3 text-left transition-all ${filter === 'all' ? 'border-gray-400 bg-white shadow-sm' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
           <p className="text-2xl font-bold text-gray-900">{total}</p>
           <p className="text-xs text-gray-500 mt-0.5">All Submissions</p>
-        </button>
-        <button onClick={() => setFilter('action')}
-          className={`rounded-xl border p-3 text-left transition-all ${filter === 'action' ? 'border-orange-400 bg-orange-50 shadow-sm' : 'border-gray-200 bg-white hover:bg-orange-50'}`}>
-          <p className="text-2xl font-bold text-orange-600">{actionCount}</p>
-          <p className="text-xs text-orange-600 mt-0.5 font-medium">⚠ DRM Action Needed</p>
         </button>
         <button onClick={() => setFilter('running')}
           className={`rounded-xl border p-3 text-left transition-all ${filter === 'running' ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-gray-200 bg-white hover:bg-blue-50'}`}>
@@ -157,13 +152,12 @@ export default function RequirementsPage() {
                     onClick={() => router.push(`/dashboard/requirements/${req.id}`)}
                     className={`transition-colors cursor-pointer ${needsAction ? 'hover:bg-orange-50 bg-orange-50/30' : 'hover:bg-gray-50'}`}>
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-900">{(req.extractedFields as any)?.companyName || req.donor?.orgName || 'Unknown'}</p>
-
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {req.rawDocumentUrl
-                          ? `📄 ${req.rawDocumentUrl.replace('uploaded:', '')}`
-                          : 'Manual form'}
-                      </p>
+                      <p className="font-semibold text-gray-900">{fields?.companyName || req.donor?.orgName || 'Unknown'}</p>
+                      {req.rawDocumentUrl && (
+                        <p className="text-[10px] text-gray-400 mt-0.5 font-mono">
+                          📄 {req.rawDocumentUrl.replace('uploaded:', '')}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={`text-xs font-semibold inline-flex items-center gap-1 px-2 py-1 rounded-md border ${
@@ -206,7 +200,7 @@ export default function RequirementsPage() {
                       )}
                       {req.status === 'NEEDS_REVIEW' && (
                         <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
-                          ⚠ Low Confidence — Fix
+                          ⚠ Click row → Fill correction form
                         </span>
                       )}
                       {req.status === 'PENDING_EXTRACTION' && (

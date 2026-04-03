@@ -6,7 +6,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-
+  directUrl  = env("DIRECT_URL")
   extensions = [uuid_ossp(map: "uuid-ossp"), vector, pgcrypto]
 }
 
@@ -312,6 +312,25 @@ model Story {
   tenant            Tenant        @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId, approvalStatus])
+}
+
+model JobQueue {
+  id          String    @id @default(uuid())
+  tenantId    String
+  jobType     String    // requirement-extraction | gap-analysis | initiative-matching | pitch-deck | initiative-embedding
+  entityId    String    // requirementId or initiativeId
+  status      String    @default("PENDING") // PENDING | RUNNING | COMPLETED | FAILED
+  payload     Json      @default("{}")
+  result      Json?
+  errorMsg    String?
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  createdAt   DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  @@index([status, jobType])
+  @@index([tenantId, entityId])
 }
 
 model MatchResult {

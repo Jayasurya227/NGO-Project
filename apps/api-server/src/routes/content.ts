@@ -3,8 +3,32 @@ import { prisma } from '@ngo/database';
 import { auditLog } from '@ngo/audit';
 import { requirePermission } from '../middleware/rbac';
 import { z } from 'zod';
-import { existsSync, readFileSync } from 'fs';
-import { basename } from 'path';
+import { readFileSync, readdirSync } from 'fs';
+import { basename, join } from 'path';
+
+function resolveFilePath(storedPath: string): string | null {
+  // 1. Try the stored absolute path
+  try { readFileSync(storedPath); return storedPath; } catch {}
+
+  const localDir = join(process.cwd(), 'tmp', 'pitch-decks');
+
+  // 2. Try exact filename in local tmp dir
+  const exactLocal = join(localDir, basename(storedPath));
+  try { readFileSync(exactLocal); return exactLocal; } catch {}
+
+  // 3. Match by requirement-ID prefix (same req, different timestamp — generated on another machine)
+  const match = basename(storedPath).match(/^pitch-deck-([a-f0-9-]+)-\d+\.pptx$/i);
+  if (match) {
+    const reqId = match[1];
+    try {
+      const files = readdirSync(localDir);
+      const found = files.find(f => f.startsWith(`pitch-deck-${reqId}-`) && f.endsWith('.pptx'));
+      if (found) return join(localDir, found);
+    } catch {}
+  }
+
+  return null;
+}
 
 const ApprovalBody = z.object({
   notes: z.string().max(1000).optional(),
@@ -60,13 +84,13 @@ export async function contentRoutes(app: FastifyInstance) {
       });
     }
 
-    const hasFile = !!artifact.fileUrl && existsSync(artifact.fileUrl);
+    const resolvedPath = artifact.fileUrl ? resolveFilePath(artifact.fileUrl) : null;
 
     return reply.send({
       success: true,
       data: {
         ...artifact,
-        downloadUrl: hasFile ? `http://localhost:4000/api/content/${id}/download` : null,
+        downloadUrl: resolvedPath ? `http://localhost:4000/api/content/${id}/download` : null,
       },
     });
   });
@@ -83,13 +107,17 @@ export async function contentRoutes(app: FastifyInstance) {
       select: { fileUrl: true, approvalStatus: true },
     });
 
-    if (!artifact?.fileUrl || !existsSync(artifact.fileUrl)) {
+    if (!artifact?.fileUrl) {
+      return reply.status(404).send({ success: false, error: { code: 'NOT_FOUND', message: 'File path not recorded.' } });
+    }
+
+    const resolvedPath = resolveFilePath(artifact.fileUrl);
+    if (!resolvedPath) {
       return reply.status(404).send({ success: false, error: { code: 'NOT_FOUND', message: 'File not found on server.' } });
     }
 
-    const fileBuffer = readFileSync(artifact.fileUrl);
-    const fileName = basename(artifact.fileUrl);
-
+    const fileBuffer = readFileSync(resolvedPath);
+    const fileName = basename(resolvedPath);
     reply.header('Content-Type', 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
     reply.header('Content-Disposition', `attachment; filename="${fileName}"`);
     return reply.send(fileBuffer);

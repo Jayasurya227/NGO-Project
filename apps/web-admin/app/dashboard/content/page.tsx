@@ -38,13 +38,13 @@ export default function ContentPage() {
         <div className="animate-pulse space-y-2">
           {[...Array(5)].map((_, i) => <div key={i} className="h-16 bg-slate-100 rounded-lg" />)}
         </div>
-      ) : data?.data.length === 0 ? (
+      ) : (data?.data?.length ?? 0) === 0 ? (
         <div className="text-center py-20 text-slate-400 text-sm">
           No content generated yet. Approve match results to trigger pitch deck generation.
         </div>
       ) : (
         <div className="space-y-2">
-          {data?.data.map((item: any) => (
+          {(data?.data ?? []).map((item: any) => (
             <Link
               key={item.id}
               href={`/dashboard/content/${item.id}`}

@@ -1,43 +1,26 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { api } from '../../lib/api'
-import { Users, FileText, Landmark, Activity } from 'lucide-react'
+import { Users, FileText, Landmark, BrainCircuit } from 'lucide-react'
+
+const AGENT_COUNT = 4
 
 export default function DashboardPage() {
   const [donors, setDonors]             = useState(0)
   const [requirements, setRequirements] = useState(0)
   const [initiatives, setInitiatives]   = useState(0)
-  const [jobs, setJobs]                 = useState(0)
 
   useEffect(() => {
-    console.log('[DEBUG] DashboardPage: Starting data fetch...')
-    api.get('/api/donors').then(r => {
-      console.log('[DEBUG] /api/donors response:', r)
-      setDonors(r.meta?.total ?? 0)
-    }).catch(err => console.error('[DEBUG] /api/donors error:', err))
-
-    api.get('/api/requirements').then(r => {
-      console.log('[DEBUG] /api/requirements response:', r)
-      setRequirements(r.meta?.total ?? 0)
-    }).catch(err => console.error('[DEBUG] /api/requirements error:', err))
-
-    api.get('/api/initiatives').then(r => {
-      console.log('[DEBUG] /api/initiatives response:', r)
-      setInitiatives(r.meta?.total ?? 0)
-    }).catch(err => console.error('[DEBUG] /api/initiatives error:', err))
-
-    api.get('/api/agents/jobs').then(r => {
-      console.log('[DEBUG] /api/agents/jobs response:', r)
-      setJobs(r.meta?.total ?? 0)
-    }).catch(err => console.error('[DEBUG] /api/agents/jobs error:', err))
+    api.get('/api/donors').then(r => setDonors(r.meta?.total ?? 0)).catch(() => {})
+    api.get('/api/requirements').then(r => setRequirements(r.meta?.total ?? 0)).catch(() => {})
+    api.get('/api/initiatives').then(r => setInitiatives(r.meta?.total ?? 0)).catch(() => {})
   }, [])
 
-
   const stats = [
-    { label: 'Total donors',      value: donors,       icon: Users,     color: 'bg-blue-50 text-blue-700' },
-    { label: 'Requirements',      value: requirements, icon: FileText,  color: 'bg-purple-50 text-purple-700' },
-    { label: 'Initiatives',       value: initiatives,  icon: Landmark,  color: 'bg-green-50 text-green-700' },
-    { label: 'Agent jobs',        value: jobs,         icon: Activity,  color: 'bg-amber-50 text-amber-700' },
+    { label: 'Total Donors',    value: donors,       icon: Users,        color: 'bg-blue-50 text-blue-700' },
+    { label: 'Requirements',    value: requirements, icon: FileText,     color: 'bg-purple-50 text-purple-700' },
+    { label: 'NGO Initiatives', value: initiatives,  icon: Landmark,     color: 'bg-green-50 text-green-700' },
+    { label: 'AI Agents',       value: AGENT_COUNT,  icon: BrainCircuit, color: 'bg-amber-50 text-amber-700' },
   ]
 
   return (
@@ -56,7 +39,7 @@ export default function DashboardPage() {
       </div>
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h3 className="text-sm font-medium text-gray-700 mb-1">Quick start</h3>
-        <p className="text-sm text-gray-500">Use the sidebar to navigate between donors, requirements, and initiatives.</p>
+        <p className="text-sm text-gray-500">Use <strong>Agent Jobs</strong> in the sidebar to upload donor documents or NGO initiative files and start the AI pipeline.</p>
       </div>
     </div>
   )

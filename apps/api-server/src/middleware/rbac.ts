@@ -30,8 +30,42 @@ export async function authenticate(req: FastifyRequest, reply: FastifyReply) {
 
 // Role permission map
 const PERMISSIONS: Record<string, string[]> = {
+  // ── Admin portal roles ───────────────────────────────────────────────────────
+  NGO_ADMIN: [
+    "donor:read", "donor:create", "donor:update",
+    "requirement:read", "requirement:create", "requirement:update", "requirement:delete",
+    "initiative:read", "initiative:create", "initiative:update", "initiative:delete",
+    "content:read", "content:approve",
+    "agent:read",
+    "milestone:read", "milestone:create", "milestone:update",
+    "story:read", "story:approve",
+  ],
+  DRM: [
+    "donor:read", "donor:create", "donor:update",
+    "requirement:read", "requirement:create", "requirement:update",
+    "initiative:read", "initiative:create", "initiative:update",
+    "content:read", "content:approve",
+    "agent:read",
+    "milestone:read",
+    "story:read",
+  ],
+  PROGRAM_MANAGER: [
+    "donor:read",
+    "requirement:read", "requirement:create", "requirement:update",
+    "initiative:read", "initiative:create", "initiative:update",
+    "content:read", "content:approve",
+    "agent:read",
+    "milestone:read", "milestone:create", "milestone:update",
+    "story:read", "story:approve",
+  ],
+  FIELD_WORKER: [
+    "initiative:read",
+    "milestone:read", "milestone:update",
+  ],
+  // ── Limited / read-only roles ─────────────────────────────────────────────────
   FINANCE_OFFICER: ["donor:read", "requirement:read"],
   AUDITOR:         ["donor:read", "requirement:read", "initiative:read", "agent:read"],
+  // ── Donor portal role ─────────────────────────────────────────────────────────
   DONOR:           ["requirement:create", "requirement:read", "initiative:read", "content:read"],
 };
 

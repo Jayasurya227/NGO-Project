@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "./src/queues.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "workers": "tsx src/start-all-workers.ts"
   },
   "dependencies": {
     "bullmq": "^5.1.0",

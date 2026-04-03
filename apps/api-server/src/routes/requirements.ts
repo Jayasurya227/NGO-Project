@@ -150,19 +150,26 @@ export async function requirementsRoutes(app: FastifyInstance) {
       });
     }
 
-    const { donorId, documentUrl } = parsed.data;
+    const { donorId, documentUrl, notes } = parsed.data;
 
     const donor = await prisma.donor.findFirst({ where: { id: donorId, tenantId } });
     if (!donor) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Donor not found" } });
 
     const requirement = await prisma.sponsorRequirement.create({
-      data: { tenantId, donorId, rawDocumentUrl: documentUrl, status: "PENDING_EXTRACTION" },
+      data: {
+        tenantId,
+        donorId,
+        rawDocumentUrl: documentUrl,
+        status: "PENDING_EXTRACTION",
+        // Save manual notes as rawText so the extraction worker can read them
+        ...(notes ? { extractedFields: { rawText: notes } } : {}),
+      },
       select: { id: true, status: true, createdAt: true },
     });
 
     const job = await queues.requirementExtraction.add(
       "extract",
-      { requirementId: requirement.id, tenantId, documentUrl: documentUrl ?? "", documentText: "" },
+      { requirementId: requirement.id, tenantId, documentUrl: documentUrl ?? "", documentText: notes ?? "" },
       DEFAULT_JOB_OPTIONS
     );
 
@@ -206,6 +213,55 @@ export async function requirementsRoutes(app: FastifyInstance) {
     });
   });
 
+  // GET /pitch-decks — approved pitch decks for this donor's requirements (must be before /:id)
+  app.get("/pitch-decks", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
+    const { tenantId } = req as any;
+    const donorId = (req as any).user?.donorId;
+    const role = (req as any).role;
+
+    const where: any = { tenantId };
+    if (role === "DONOR" && donorId) {
+      where.donorId = donorId;
+    }
+
+    const requirements = await prisma.sponsorRequirement.findMany({
+      where,
+      select: { id: true },
+    });
+
+    const requirementIds = requirements.map((r: any) => r.id);
+    if (requirementIds.length === 0) {
+      return reply.send({ success: true, data: [] });
+    }
+
+    const artifacts = await prisma.contentArtifact.findMany({
+      where: {
+        tenantId,
+        type: "PITCH_DECK",
+        approvalStatus: { in: ["PENDING_REVIEW", "APPROVED"] },
+        relatedEntityId: { in: requirementIds },
+      },
+      select: { id: true, relatedEntityId: true, approvalStatus: true, approvedAt: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Enrich with initiative name from top match
+    const enriched = await Promise.all(artifacts.map(async (a) => {
+      const topMatch = await prisma.matchResult.findFirst({
+        where: { requirementId: a.relatedEntityId },
+        include: { initiative: { select: { title: true, tenant: { select: { name: true } } } } },
+        orderBy: { rank: 'asc' },
+      });
+      return {
+        ...a,
+        initiativeTitle: topMatch?.initiative?.title ?? null,
+        ngoName: topMatch?.initiative?.tenant?.name ?? null,
+      };
+    }));
+
+    return reply.send({ success: true, data: enriched });
+  });
+
   // GET /api/requirements/:id
   app.get("/:id", { preHandler: requirePermission("requirement:read") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;
@@ -215,7 +271,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
       where: { id, tenantId },
       include: {
         donor: { select: { id: true, type: true, orgName: true } },
-        matchResults: { select: { id: true, rank: true, overallScore: true }, orderBy: { rank: "asc" }, take: 5 },
+        matchResults: { select: { id: true, rank: true, overallScore: true, initiative: { select: { targetBeneficiaries: true } } }, orderBy: { rank: "asc" }, take: 5 },
         _count: { select: { matchResults: true } },
       },
     });
@@ -267,6 +323,19 @@ export async function requirementsRoutes(app: FastifyInstance) {
       data: { status: "VALIDATED", extractedFields: mergedFields },
     });
 
+    // Directly queue gap analysis so it starts immediately (not via polling recovery)
+    const gapJob = await queues.gapAnalysis.add(
+      "analyse",
+      { requirementId: id, tenantId },
+      DEFAULT_JOB_OPTIONS
+    );
+
+    await prisma.agentJobLog.upsert({
+      where: { jobId: gapJob.id! },
+      update: { status: "QUEUED" },
+      create: { tenantId, jobId: gapJob.id!, agentName: "gap-diagnoser", status: "QUEUED" },
+    });
+
     return reply.send({ success: true });
   });
 
@@ -289,10 +358,24 @@ export async function requirementsRoutes(app: FastifyInstance) {
             id: true, title: true, sector: true, geography: true,
             description: true, budgetRequired: true, budgetFunded: true,
             targetBeneficiaries: true, sdgTags: true,
+            milestones: { select: { status: true } },
           },
         },
       },
       orderBy: { rank: "asc" },
+    });
+
+    const transformedMatches = matches.map(m => {
+      const { milestones, ...initRest } = m.initiative as any;
+      return {
+        ...m,
+        initiative: {
+          ...initRest,
+          fundingGapInr: Number(m.initiative.budgetRequired) - Number(m.initiative.budgetFunded),
+          completedMilestones: milestones.filter((ms: any) => ms.status === "COMPLETED").length,
+          totalMilestones: milestones.length,
+        },
+      };
     });
 
     return reply.send({
@@ -300,9 +383,75 @@ export async function requirementsRoutes(app: FastifyInstance) {
       data: {
         requirementStatus: req2.status,
         requirementFields: req2.extractedFields,
-        matches,
+        matches: transformedMatches,
         canApprove: ["VALIDATED", "MATCHED"].includes(req2.status),
       },
+    });
+  });
+
+  // POST /api/requirements/:id/matches/approve
+  app.post("/:id/matches/approve", { preHandler: requirePermission("requirement:update") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
+    const { id } = req.params as { id: string };
+
+    const parsed = ApproveMatchesBody.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: "Invalid body", details: parsed.error.issues },
+      });
+    }
+
+    const { approvedMatchIds, reorderedRanks } = parsed.data;
+
+    const requirement = await prisma.sponsorRequirement.findFirst({ where: { id, tenantId } });
+    if (!requirement) {
+      return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Requirement not found" } });
+    }
+
+    if (!["VALIDATED", "MATCHED"].includes(requirement.status)) {
+      return reply.status(400).send({
+        success: false,
+        error: { code: "INVALID_STATE", message: `Cannot approve matches in status: ${requirement.status}` },
+      });
+    }
+
+    // Apply any PM-reordered ranks
+    if (reorderedRanks && Object.keys(reorderedRanks).length > 0) {
+      for (const [matchId, rank] of Object.entries(reorderedRanks)) {
+        await prisma.matchResult.updateMany({
+          where: { id: matchId, requirementId: id },
+          data: { rank },
+        });
+      }
+    }
+
+    // Queue pitch deck generation
+    const job = await queues.pitchDeckGeneration.add(
+      "generate",
+      { requirementId: id, tenantId, approvedMatchIds },
+      DEFAULT_JOB_OPTIONS
+    );
+
+    await prisma.agentJobLog.upsert({
+      where: { jobId: job.id! },
+      update: { status: "QUEUED" },
+      create: { tenantId, jobId: job.id!, agentName: "pitch-deck-agent", status: "QUEUED" },
+    });
+
+    await auditLog({
+      tenantId,
+      actorId: (req as any).userId,
+      eventType: "MATCHES_APPROVED",
+      entityType: "SponsorRequirement",
+      entityId: id,
+      actorType: "USER",
+      afterState: { approvedMatchIds, pitchDeckJobId: job.id },
+    });
+
+    return reply.send({
+      success: true,
+      data: { jobId: job.id!, status: "QUEUED", message: "Pitch deck generation started" },
     });
   });
 

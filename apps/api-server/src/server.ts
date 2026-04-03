@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+﻿import { readFileSync } from "fs";
 import { resolve } from "path";
 function loadEnv() {
   try {
@@ -14,7 +14,7 @@ function loadEnv() {
       if (eqIndex === -1) continue;
       const key = trimmed.slice(0, eqIndex).trim();
       const value = trimmed.slice(eqIndex + 1).trim();
-      if (key && !process.env[key]) process.env[key] = value;
+      if (key) process.env[key] = value;
     }
   } catch {}
 }
@@ -30,10 +30,11 @@ import { agentRoutes } from "./routes/agents";
 import { contentRoutes } from "./routes/content";
 import { storyRoutes } from "./routes/stories";
 import { milestonesRoutes } from "./routes/milestones";
+import { evidenceRoutes } from "./routes/evidence";
+import { donationsRoutes } from "./routes/donations";
 import { websocketPlugin } from "./ws/plugin";
 async function start() {
   const app = Fastify({ logger: false, ignoreTrailingSlash: true });
-
   await app.register(cors, {
     origin: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -69,14 +70,14 @@ async function start() {
   app.register(contentRoutes, { prefix: "/api/content" });
   app.register(storyRoutes, { prefix: "/api/stories" });
   app.register(milestonesRoutes, { prefix: "/api/initiatives" }); // Mounts sub-routes under initiatives
-
+  app.register(evidenceRoutes, { prefix: "/api/evidence" });
+  app.register(donationsRoutes, { prefix: "/api/donations" });
   
   const port = parseInt(process.env.API_PORT ?? "4000");
   await app.listen({ port, host: "0.0.0.0" });
   console.log(`✅ API server running on http://localhost:${port}`);
   console.log(app.printRoutes());
 }
-
 start().catch((err) => {
   console.error("Server failed to start:", err);
   process.exit(1);

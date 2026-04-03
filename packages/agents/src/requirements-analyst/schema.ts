@@ -4,7 +4,7 @@ export const ExtractionSchema = z.object({
   sector: z.enum([
     "EDUCATION", "HEALTHCARE", "LIVELIHOOD",
     "ENVIRONMENT", "WATER_SANITATION", "OTHER",
-  ]).describe("Primary sector focus of the CSR requirement"),
+  ]).nullable().transform(v => v ?? "OTHER").describe("Primary sector focus of the CSR requirement"),
   
   companyName: z.string().nullable().describe("Executing company or foundation name (e.g. TCS Ltd)"),
   companyNameConf: z.number().min(0).max(1).describe("Confidence in company name extraction"),
