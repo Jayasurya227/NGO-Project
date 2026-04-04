@@ -9,6 +9,8 @@ export const ExtractionSchema = z.object({
   companyName: z.string().nullable().describe("Executing company or foundation name (e.g. TCS Ltd)"),
   companyNameConf: z.number().min(0).max(1).describe("Confidence in company name extraction"),
 
+  ngoId: z.string().nullable().describe("NGO registration number, project ID, FCRA number, or certificate number if present in document"),
+
 
   sectorConfidence: z.number().min(0).max(1)
     .describe("Confidence 0.0-1.0 that the sector was correctly identified"),

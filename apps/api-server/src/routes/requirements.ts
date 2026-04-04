@@ -3,20 +3,67 @@ import { prisma } from "@ngo/database";
 import { auditLog } from "@ngo/audit";
 import { queues, DEFAULT_JOB_OPTIONS } from "@ngo/queue";
 import { requirePermission } from "../middleware/rbac";
+import { encrypt } from "@ngo/auth/encryption";
 import { z } from "zod";
 
+// Resolve or auto-create a donor for the given tenant.
+// Used when the donor portal issues a "guest" token (no real donor record yet).
+async function resolveOrCreateDonor(tenantId: string, donorId: string | null): Promise<string> {
+  // 1. Try exact match first
+  if (donorId && donorId !== "guest") {
+    const existing = await prisma.donor.findFirst({ where: { id: donorId, tenantId } });
+    if (existing) return existing.id;
+  }
+
+  // 2. Fall back to first donor in tenant
+  const first = await prisma.donor.findFirst({ where: { tenantId }, select: { id: true } });
+  if (first) return first.id;
+
+  // 3. Auto-create a placeholder donor so the upload can proceed
+  const placeholder = await prisma.donor.create({
+    data: {
+      tenantId,
+      type: "CSR" as any,
+      orgName: "Portal Donor",
+      contactNameEnc: await encrypt("Portal Donor"),
+      emailEnc: await encrypt("donor@portal.local"),
+      kycStatus: "NOT_REQUIRED" as any,
+    },
+    select: { id: true },
+  });
+  return placeholder.id;
+}
+
 function getMimeType(fileName: string): string {
-  if (fileName.endsWith(".pdf")) return "application/pdf";
-  if (fileName.endsWith(".png")) return "image/png";
-  if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) return "image/jpeg";
+  const n = fileName.toLowerCase();
+  if (n.endsWith(".pdf"))               return "application/pdf";
+  if (n.endsWith(".png"))               return "image/png";
+  if (n.endsWith(".jpg") || n.endsWith(".jpeg")) return "image/jpeg";
+  if (n.endsWith(".webp"))              return "image/webp";
+  if (n.endsWith(".gif"))               return "image/gif";
+  if (n.endsWith(".bmp"))               return "image/bmp";
+  if (n.endsWith(".tiff") || n.endsWith(".tif")) return "image/tiff";
+  if (n.endsWith(".docx"))              return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (n.endsWith(".xlsx"))              return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  if (n.endsWith(".pptx"))              return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+  if (n.endsWith(".txt") || n.endsWith(".csv")) return "text/plain";
   return "application/octet-stream";
+}
+
+function isImageMime(mime: string): boolean {
+  return mime.startsWith("image/");
+}
+
+function isGeminiNativeMime(mime: string): boolean {
+  // Mime types Gemini can read directly as inline data
+  return mime === "application/pdf" || mime.startsWith("image/");
 }
 
 const getDocxParser = async () => (await import("mammoth")).default;
 const getPdfParser = async () => { const m = await import("pdf-parse"); return (m as any).default || m; };
 
 const CreateRequirementBody = z.object({
-  donorId: z.string().uuid(),
+  donorId: z.string().optional(),
   documentUrl: z.string().optional(),
   notes: z.string().max(2000).optional(),
 });
@@ -50,16 +97,28 @@ export async function requirementsRoutes(app: FastifyInstance) {
           fileBuffer = await part.toBuffer();
           fileName = part.filename ?? "document"; // FIX 1: capture fileName
 
-          // FIX 2: extract text from file (was missing entirely)
+          // Extract text — support any file type
           try {
-            if (fileName.toLowerCase().endsWith(".docx")) {
+            const fn = fileName.toLowerCase();
+            if (fn.endsWith(".docx") || fn.endsWith(".doc")) {
               const mammoth = await getDocxParser();
               fileText = (await mammoth.extractRawText({ buffer: fileBuffer })).value;
-            } else if (fileName.toLowerCase().endsWith(".pdf")) {
+            } else if (fn.endsWith(".pdf")) {
               const pdfParse = await getPdfParser();
               fileText = (await pdfParse(fileBuffer)).text;
-            } else {
+            } else if (fn.endsWith(".txt") || fn.endsWith(".csv") || fn.endsWith(".md")) {
               fileText = fileBuffer.toString("utf-8").slice(0, 15000);
+            } else if (fn.endsWith(".xlsx") || fn.endsWith(".xls")) {
+              // Basic xlsx: extract raw text from XML inside zip
+              try {
+                const str = fileBuffer.toString("utf-8");
+                const matches = str.match(/<t[^>]*>([^<]+)<\/t>/g) ?? [];
+                fileText = matches.map(m => m.replace(/<[^>]+>/g, "")).join(" ").slice(0, 15000);
+              } catch { fileText = ""; }
+            } else {
+              // Try UTF-8 decode; if it looks like text, use it
+              const attempt = fileBuffer.toString("utf-8").slice(0, 15000);
+              fileText = /[\x00-\x08\x0E-\x1F]/.test(attempt.slice(0, 200)) ? "" : attempt;
             }
           } catch { fileText = ""; }
         }
@@ -71,13 +130,6 @@ export async function requirementsRoutes(app: FastifyInstance) {
       });
     }
 
-    if (!donorId) {
-      return reply.status(400).send({
-        success: false,
-        error: { code: "VALIDATION_ERROR", message: "donorId is required" },
-      });
-    }
-
     if (!fileBuffer) {
       return reply.status(400).send({
         success: false,
@@ -85,28 +137,25 @@ export async function requirementsRoutes(app: FastifyInstance) {
       });
     }
 
-    const donor = await prisma.donor.findFirst({ where: { id: donorId, tenantId } });
-    if (!donor) {
-      return reply.status(404).send({
-        success: false,
-        error: { code: "NOT_FOUND", message: "Donor not found" },
-      });
-    }
+    // Resolve donorId — falls back to first tenant donor or auto-creates one
+    const jwtDonorId = (req as any).user?.donorId ?? donorId;
+    const resolvedDonorId = await resolveOrCreateDonor(tenantId, jwtDonorId);
 
     const mimeType = getMimeType(fileName);
-    const hasText = fileText.trim().length >= 80; // FIX 3: now correctly evaluated
+    const hasText = fileText.trim().length >= 80;
+    // For images and PDFs Gemini can read natively via multimodal — always store base64
+    const useMultimodal = isGeminiNativeMime(mimeType) && !hasText;
 
     const requirement = await prisma.sponsorRequirement.create({
       data: {
         tenantId,
-        donorId,
+        donorId: resolvedDonorId,
         rawDocumentUrl: `uploaded:${fileName}`,
         extractedFields: hasText
           ? { rawText: fileText.slice(0, 20000) }
-          : {
-            rawFileMimeType: mimeType,
-            rawFileBase64: fileBuffer.toString("base64"),
-          },
+          : useMultimodal
+            ? { rawFileMimeType: mimeType, rawFileBase64: fileBuffer.toString("base64") }
+            : { rawText: `Uploaded file: ${fileName} (no text extractable — DRM please fill manually)` },
         status: "PENDING_EXTRACTION",
       },
       select: { id: true, status: true, createdAt: true },
@@ -150,15 +199,15 @@ export async function requirementsRoutes(app: FastifyInstance) {
       });
     }
 
-    const { donorId, documentUrl, notes } = parsed.data;
+    const { donorId: rawDonorId, documentUrl, notes } = parsed.data;
 
-    const donor = await prisma.donor.findFirst({ where: { id: donorId, tenantId } });
-    if (!donor) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Donor not found" } });
+    const jwtDonorId2 = (req as any).user?.donorId ?? rawDonorId;
+    const resolvedDonorId2 = await resolveOrCreateDonor(tenantId, jwtDonorId2);
 
     const requirement = await prisma.sponsorRequirement.create({
       data: {
         tenantId,
-        donorId,
+        donorId: resolvedDonorId2,
         rawDocumentUrl: documentUrl,
         status: "PENDING_EXTRACTION",
         // Save manual notes as rawText so the extraction worker can read them
@@ -453,6 +502,19 @@ export async function requirementsRoutes(app: FastifyInstance) {
       success: true,
       data: { jobId: job.id!, status: "QUEUED", message: "Pitch deck generation started" },
     });
+  });
+
+  // DELETE /:id
+  app.delete("/:id", { preHandler: requirePermission("requirement:create") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
+    const { id } = req.params as { id: string };
+
+    const req_ = await prisma.sponsorRequirement.findFirst({ where: { id, tenantId } });
+    if (!req_) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Requirement not found" } });
+
+    await prisma.sponsorRequirement.delete({ where: { id } });
+
+    return reply.send({ success: true });
   });
 
 }

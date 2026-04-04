@@ -101,6 +101,7 @@ async function extractWithGemini(documentText: string, rawFileBase64?: string, r
 {
   "companyName": "Organisation name from document, or null",
   "companyNameConf": 0.9,
+  "ngoId": "NGO registration/project/FCRA number if present, or null",
   "sector": "EDUCATION",
   "sectorConfidence": 0.9,
   "geography": {
@@ -144,9 +145,20 @@ Use 0 for unknown numbers, null for unknown strings, [] for missing arrays.`;
     const rawData = JSON.parse(responseText);
 
     // Normalise: fill in any missing nullable fields so Zod doesn't throw
+    // Validate ngoId — reject garbage values
+    const rawNgoId = rawData.ngoId;
+    const validatedNgoId = (
+      rawNgoId &&
+      typeof rawNgoId === "string" &&
+      rawNgoId.trim().length > 0 &&
+      rawNgoId.trim().length <= 60 &&
+      rawNgoId.trim().split(" ").length <= 6
+    ) ? rawNgoId.trim() : null;
+
     const norm = {
       companyName:        rawData.companyName        ?? null,
       companyNameConf:    rawData.companyNameConf    ?? 0,
+      ngoId:              validatedNgoId,
       sector:             rawData.sector             ?? "OTHER",
       sectorConfidence:   rawData.sectorConfidence   ?? 0,
       geography: {
@@ -206,6 +218,10 @@ function runHeuristicExtraction(text: string): ExtractionResult | null {
   // Match org/NGO/company name from various patterns
   const orgMatch = text.match(/(?:Organization|Organisation|NGO|Company|Foundation|Trust|Society)\s*(?:Name)?\s*[:\-]\s*([^\n\r]+)/i)
     || text.match(/(?:Submitted by|Implementing Agency|Proposing Organization)\s*[:\-]\s*([^\n\r]+)/i);
+
+  // NGO ID extraction — look for registration/FCRA/certificate numbers
+  const ngoIdMatch = text.match(/(?:NGO\s*ID|Registration\s*(?:No\.?|Number)|Reg\.?\s*No\.?|FCRA\s*(?:No\.?|Number)|Certificate\s*(?:No\.?|Number)|Project\s*(?:ID|No\.?))\s*[:\-]?\s*([A-Z0-9\/\-]{4,40})/i);
+  const rawHeuristicNgoId = ngoIdMatch?.[1]?.trim() ?? null;
 
   const sectorMatch = text.match(/(?:Sector|Focus Area|Theme|Domain)\s*[:\-]\s*([^\n\r]+)/i);
 
@@ -309,6 +325,7 @@ function runHeuristicExtraction(text: string): ExtractionResult | null {
   return {
     companyName:     orgName,
     companyNameConf: orgName ? 0.75 : 0,
+    ngoId:           rawHeuristicNgoId,
     sector,
     sectorConfidence: sectorMatch ? 0.75 : 0.5,
     geography: {
@@ -382,7 +399,38 @@ export async function runRequirementsAnalyst(
     return { status: "FAILED", requiresReview: true, lowConfidenceFields: [] };
   }
 
-  // Step 3 — Persist results
+  // Step 3 — Check if ANY intake field was matched
+  const hasAnyField =
+    (result.companyName && result.companyNameConf > 0) ||
+    (result.sector && result.sector !== "OTHER" && result.sectorConfidence > 0) ||
+    (result.geography.state && result.geography.stateConf > 0) ||
+    (result.budget.minInr != null && result.budget.minInr > 0 && result.budget.conf > 0) ||
+    (result.durationMonths.value != null && result.durationMonths.value > 0) ||
+    (result.primaryKpis.length > 0 && result.primaryKpis.some(k => k.conf > 0));
+
+  if (!hasAnyField) {
+    console.warn("[requirements-analyst] Zero fields matched — rejecting document.");
+    await prisma.sponsorRequirement.update({
+      where: { id: requirementId },
+      data: {
+        status: "REJECTED" as any,
+        extractedFields: {
+          rejectionReason: "No intake form fields could be matched from this document. Please upload a valid CSR RFP or NGO proposal document.",
+        },
+      },
+    });
+    await auditLog({
+      tenantId,
+      eventType: "REQUIREMENT_EXTRACTION_FAILED",
+      entityType: "SponsorRequirement",
+      entityId: requirementId,
+      actorType: "AGENT",
+      afterState: { reason: "zero_fields_matched" },
+    });
+    return { status: "REJECTED", requiresReview: false, lowConfidenceFields: ["all — no fields matched from document"] };
+  }
+
+  // Step 4 — Persist results
   const status = result.requiresHumanReview ? "NEEDS_REVIEW" : "EXTRACTED";
 
   // Preserve rawText (text docs) or rawFileMimeType (scanned docs) from upload

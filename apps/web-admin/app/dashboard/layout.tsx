@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Toaster } from 'react-hot-toast'
 import { getSession, clearSession } from '../../lib/auth'
 import { useAgentEvents } from '../../hooks/useAgentEvents'
-import { FileText, LayoutDashboard, LogOut, Landmark, Activity, FileCheck, BarChart2 } from 'lucide-react'
+import { FileText, LayoutDashboard, LogOut, Landmark, Activity, FileCheck, BarChart2, Trash2 } from 'lucide-react'
 
 const navGroups = [
   {
@@ -26,7 +26,8 @@ const navGroups = [
     label: 'AI & Matching',
     items: [
       { href: '/dashboard/content',     label: 'Proposal Approvals',  icon: FileCheck },
-      { href: '/dashboard/agents',      label: 'Agent Jobs',           icon: BarChart2 },
+      { href: '/dashboard/agents',      label: 'CSR Intake',           icon: BarChart2 },
+      { href: '/dashboard/records',     label: 'Delete Records',       icon: Trash2 },
     ]
   }
 ]

@@ -75,7 +75,7 @@ export default function DonorDashboardPage() {
   });
 
   const stories = storiesData?.data || [];
-  const requirements: any[] = reqsData?.data || [];
+  const requirements: any[] = reqsData?.data?.requirements ?? reqsData?.data ?? [];
   const pitchDecks = (pitchDecksData?.data || []).filter((d: any) => d.approvalStatus === 'APPROVED');
 
   const allInitiatives: any[] = initiativesData?.data || [];
@@ -155,11 +155,12 @@ export default function DonorDashboardPage() {
                                   </span>
                                 ) : (
                                   <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                                    req.status === 'MATCHED' ? 'bg-emerald-100 text-emerald-700' :
+                                    req.status === 'MATCHED'   ? 'bg-emerald-100 text-emerald-700' :
                                     req.status === 'PENDING_EXTRACTION' ? 'bg-amber-100 text-amber-700' :
+                                    req.status === 'REJECTED'  ? 'bg-red-100 text-red-700' :
                                     'bg-blue-100 text-blue-700'
                                   }`}>
-                                    {req.status.replace(/_/g, ' ')}
+                                    {req.status === 'REJECTED' ? '❌ Rejected' : req.status.replace(/_/g, ' ')}
                                   </span>
                                 )}
                                 <span className="text-slate-300 text-xs">•</span>

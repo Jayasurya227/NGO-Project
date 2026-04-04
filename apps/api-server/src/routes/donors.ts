@@ -67,6 +67,19 @@ export async function donorsRoutes(app: FastifyInstance) {
     });
   });
 
+  // DELETE /:id
+  app.delete("/:id", { preHandler: requirePermission("donor:read") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
+    const { id } = req.params as { id: string };
+
+    const donor = await prisma.donor.findFirst({ where: { id, tenantId } });
+    if (!donor) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Donor not found" } });
+
+    await prisma.donor.delete({ where: { id } });
+
+    return reply.send({ success: true });
+  });
+
   // POST /
   app.post("/", { preHandler: requirePermission("donor:create") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;

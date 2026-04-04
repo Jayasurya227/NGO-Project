@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "./src/client.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "studio": "node ../../node_modules/.pnpm/prisma@5.22.0/node_modules/prisma/build/index.js studio --schema=./prisma/schema.prisma"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",

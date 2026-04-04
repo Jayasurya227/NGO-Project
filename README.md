@@ -1,159 +1,195 @@
-# Turborepo starter
+# NGO Impact Platform
 
-This Turborepo starter is maintained by the Turborepo core team.
+A full-stack monorepo platform connecting NGOs with CSR donors. Built with Next.js, Fastify, Prisma, BullMQ, and Gemini AI.
 
-## Using this example
+---
 
-Run the following command:
+## Architecture
 
-```sh
-npx create-turbo@latest
+```
+ngo-impact-platform/
+├── apps/
+│   ├── web-admin/        # Admin portal (port 3000) — DRM staff, NGO managers
+│   ├── donor-portal/     # Donor/CSR portal (port 3002)
+│   └── api-server/       # Fastify REST API (port 4000)
+├── packages/
+│   ├── database/         # Prisma schema + Supabase PostgreSQL
+│   ├── agents/           # Gemini AI agents (requirements analyst)
+│   ├── queue/            # BullMQ workers (extraction, matching, embedding, gap analysis, pitch deck)
+│   ├── auth/             # AES-256-GCM encryption + JWT helpers
+│   └── audit/            # Audit log utilities
 ```
 
-## What's inside?
+---
 
-This Turborepo includes the following packages/apps:
+## Running Locally
 
-### Apps and Packages
+```powershell
+# Kill existing ports
+npx kill-port 3000
+npx kill-port 3002
+npx kill-port 4000
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+# Start all servers and workers
+cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform
+.\start-servers.ps1
+.\start-workers.ps1
 ```
 
-Without global `turbo`, use your package manager:
+| Service | URL |
+|---|---|
+| Admin Portal | http://localhost:3000 |
+| Donor Portal | http://localhost:3002 |
+| API Server | http://localhost:4000 |
 
-```sh
-cd my-turborepo
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+---
+
+## Tech Stack
+
+- **Frontend**: Next.js 14 App Router, Tailwind CSS, TanStack Query, react-hot-toast
+- **Backend**: Fastify, Prisma ORM, Supabase PostgreSQL
+- **AI**: Google Gemini (gemini-2.5-flash-lite) — document extraction, embeddings, matching
+- **Queue**: BullMQ + Redis
+- **Auth**: JWT (role-based), AES-256-GCM field encryption
+- **Package manager**: pnpm workspaces + Turborepo
+
+---
+
+## Features Built
+
+### Admin Portal (`web-admin`)
+
+#### NGO Initiatives
+- Upload NGO PDF/DOCX — AI extracts title, sector, geography, budget, SDG tags, NGO ID
+- Multimodal extraction for scanned/image-based PDFs (Gemini base64 inline)
+- NGO ID column extracted from registration numbers, FCRA numbers, project IDs
+- Clickable rows navigate to initiative detail page
+- Delete button per row
+- Columns: NGO ID, Title, Beneficiaries (SDG Tags), Sector, Geography, Budget, Status, Actions
+
+#### DRM Workspace (Donor Requirements)
+- Displays both NGO and Donor/CSR document submissions
+- Pipeline status: Pending Extraction → Extracted → Needs Review → Validated → Matched → Contracted
+- AI confidence scores, low-confidence field flags
+- Delete button per row with confirmation
+- Action badges: Review & Validate, View Matches
+
+#### Requirements Detail & Matches
+- Score breakdown in plain language (Great Fit / Decent Fit / Weak Fit)
+- Emoji rating labels: Excellent / Good / Partial / Weak / No Match
+- Rank badges: Best / 2nd / 3rd
+- Importance badges per dimension
+- "Why this score? See details" toggle
+
+#### Proposal Approvals (Content & Approvals)
+- PPTX pitch deck download with cross-machine file path resolution
+- 3-step file resolution: exact path → local tmp → requirement-ID prefix match
+- Authenticated download endpoint
+
+#### CSR Intake (Agent Jobs)
+- Upload CSR donor RFP documents
+- Triggers BullMQ extraction worker → Gemini AI analysis
+
+#### Delete Records
+- Bulk delete Donors or Initiatives with checkbox selection
+- Confirmation modal before deletion
+- Cascade deletes all related records
+
+#### Sidebar Navigation
+- Dashboard, NGO Initiatives, DRM Workspace, Donor Inquiries, Proposal Approvals, CSR Intake, Delete Records
+
+---
+
+### Donor Portal (`donor-portal`)
+
+- Login with tenant-scoped JWT (works even if specific donor records are deleted)
+- Impact Overview dashboard: active initiatives, milestones, lives impacted
+- Your Submissions: RFP status tracking with resubmission alerts
+- Pitch Decks: download approved PPTX proposals
+- Stories, Initiatives browsing
+
+---
+
+### API Server (`api-server`)
+
+#### Key Routes
+| Method | Route | Description |
+|---|---|---|
+| POST | `/api/initiatives/upload` | Upload NGO PDF, AI extracts all fields + ngoId |
+| GET | `/api/initiatives` | List initiatives (includes ngoId) |
+| DELETE | `/api/initiatives/:id` | Delete initiative (cascade milestones + matches) |
+| DELETE | `/api/requirements/:id` | Delete requirement |
+| DELETE | `/api/donors/:id` | Delete donor (cascade requirements, contracts, match results) |
+| POST | `/api/auth/donor-login` | Donor portal login — tenant-scoped, not donor-record-dependent |
+
+#### RBAC Roles
+- `NGO_ADMIN` — full access including delete
+- `DRM` — full access including delete (initiative:delete, requirement:delete, donor:delete)
+- `PROGRAM_MANAGER` — read/create/update, no delete
+- `FIELD_WORKER` — initiative and milestone read/update only
+- `DONOR` — requirement create/read, initiative read, content read
+
+---
+
+### AI Agents & Workers
+
+#### Requirements Analyst (`packages/agents/src/requirements-analyst`)
+- Extracts: company name, sector, geography, budget, duration, KPIs, reporting cadence, constraints, NGO ID
+- Multimodal mode: sends raw file as base64 to Gemini for scanned PDFs
+- Heuristic fallback when Gemini quota exceeded (regex-based extraction)
+- Confidence scoring per field — flags low-confidence fields for DRM review
+- NGO ID validation: rejects garbage values (sentences, >60 chars, >6 words)
+
+#### BullMQ Workers
+| Worker | Trigger | Output |
+|---|---|---|
+| requirement-extraction | Document upload | Extracted fields saved to SponsorRequirement |
+| initiative-embedding | Initiative create | Gemini vector embeddings for matching |
+| initiative-matching | After validation | MatchResult records ranked by score |
+| gap-analysis | After extraction | Gap report JSON |
+| pitch-deck | Manual trigger | PPTX file generated via pptxgenjs |
+
+---
+
+### Database (Prisma + Supabase)
+
+#### Key Schema Changes
+- `Initiative.ngoId String?` — NGO registration/project ID
+- `MatchResult` → `onDelete: Cascade` on both `requirement` and `initiative` relations
+- `Contract` → `onDelete: Cascade` on `requirement` relation
+- `SponsorRequirement.donor` → `onDelete: Cascade`
+- `Contract.donor` → `onDelete: Cascade`
+- `Donation.donor` → `onDelete: Cascade`
+- `CommunicationLog.donor` → `onDelete: Cascade`
+
+#### Prisma Studio
+Due to a version conflict (npx downloads v7, project uses v5.22.0), use:
+```
+cd packages/database
+pnpm studio
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+---
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+## Known Issues & Solutions
 
-```sh
-turbo build --filter=docs
+| Issue | Solution |
+|---|---|
+| OneDrive Files On-Demand causes `existsSync` false negatives | Removed `existsSync` gates, added 3-step path resolution |
+| Scanned PDFs return binary garbage to AI | Added Gemini multimodal (base64) fallback |
+| Donor login breaks when donor records deleted | Login now tenant-scoped, not dependent on specific donor record existing |
+| Prisma Studio rendering bug on Windows | Use in-app Delete Records page instead |
+| Cross-machine PPTX file paths | Fuzzy path resolution using requirement ID prefix matching |
+
+---
+
+## Environment Variables
+
+```env
+DATABASE_URL=
+GEMINI_API_KEY=
+JWT_SECRET=
+ENCRYPTION_KEY_HEX=
+HASH_SALT=
+REDIS_URL=
 ```
-
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)

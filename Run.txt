@@ -55,3 +55,10 @@ npx kill-port 4000
 cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform
 .\start-servers.ps1
 .\start-workers.ps1
+
+#PRISMA STUDIO (broken on Windows - use Delete Records page in admin portal instead)
+# Go to http://localhost:3000 -> "Delete Records" in sidebar to delete Donors / NGO Initiatives
+
+# Only use this if Studio is needed for other tables:
+cd C:\Users\maddi\OneDrive\Desktop\ngo-impact-platform\packages\database
+node ..\..\node_modules\.pnpm\prisma@5.22.0\node_modules\prisma\build\index.js studio --schema=./prisma/schema.prisma

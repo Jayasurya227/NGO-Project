@@ -88,10 +88,10 @@ function FileUploadBox({ file, setFile, color, title, description }: {
           <div>
             <p className="text-3xl mb-2">📁</p>
             <p className="text-sm font-medium text-gray-700">Click to browse or drag and drop</p>
-            <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX, PPT, PPTX, XLS, XLSX — Max 50 MB</p>
+            <p className="text-xs text-gray-400 mt-1">PDF, DOCX, images, Excel, or any document — Max 50 MB</p>
           </div>
         )}
-        <input ref={ref} type="file" accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx" className="hidden"
+        <input ref={ref} type="file" accept="*" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) setFile(f) }} />
       </div>
       {file && <p className={`text-xs ${textNote} mt-2`}>✓ AI will extract all fields from this document automatically</p>}

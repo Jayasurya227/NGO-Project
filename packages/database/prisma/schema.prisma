@@ -92,7 +92,7 @@ model SponsorRequirement {
   updatedAt        DateTime      @updatedAt
   contracts        Contract[]
   matchResults     MatchResult[]
-  donor            Donor         @relation(fields: [donorId], references: [id])
+  donor            Donor         @relation(fields: [donorId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, status])
 }
@@ -111,6 +111,7 @@ model Initiative {
   budgetFunded         Decimal                 @default(0) @db.Decimal(14, 2)
   status               InitiativeStatus        @default(DRAFT)
   embeddingVector      Unsupported("vector")?
+  ngoId                String?
   sdgTags              String[]
   startDate            DateTime?
   endDate              DateTime?
@@ -196,8 +197,8 @@ model Contract {
   expiresAt         DateTime?
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
-  donor             Donor              @relation(fields: [donorId], references: [id])
-  requirement       SponsorRequirement @relation(fields: [requirementId], references: [id])
+  donor             Donor              @relation(fields: [donorId], references: [id], onDelete: Cascade)
+  requirement       SponsorRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
   donations         Donation[]
 
   @@index([tenantId, status])
@@ -221,7 +222,7 @@ model Donation {
   updatedAt        DateTime       @updatedAt
   allocations      Allocation[]
   contract         Contract?      @relation(fields: [contractId], references: [id])
-  donor            Donor          @relation(fields: [donorId], references: [id])
+  donor            Donor          @relation(fields: [donorId], references: [id], onDelete: Cascade)
   initiative       Initiative?    @relation(fields: [initiativeId], references: [id])
   tenant           Tenant         @relation(fields: [tenantId], references: [id])
 
@@ -348,8 +349,8 @@ model MatchResult {
   humanOverrideBy         String?
   rank                    Int?
   createdAt               DateTime           @default(now())
-  initiative              Initiative         @relation(fields: [initiativeId], references: [id])
-  requirement             SponsorRequirement @relation(fields: [requirementId], references: [id])
+  initiative              Initiative         @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  requirement             SponsorRequirement @relation(fields: [requirementId], references: [id], onDelete: Cascade)
 
   @@index([requirementId])
 }
@@ -389,7 +390,7 @@ model CommunicationLog {
   bouncedAt         DateTime?
   messageIdExternal String?
   createdAt         DateTime    @default(now())
-  donor             Donor       @relation(fields: [donorId], references: [id])
+  donor             Donor       @relation(fields: [donorId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, donorId])
 }
@@ -476,6 +477,7 @@ enum ReqStatus {
   MATCHED
   CONTRACTED
   CLOSED
+  REJECTED
 }
 
 enum Sector {

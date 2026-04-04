@@ -58,6 +58,16 @@ For CSR documents: extract the outcomes the corporate funder expects
 Convert to months: "1 year" = 12, "2 years" = 24, "18 months" = 18, "6 months" = 6
 Look for: Duration, Timeline, Project Period, Implementation Period.
 
+## NGO ID EXTRACTION
+If the document is an NGO project proposal, look for any identifier such as:
+- Registration Number / Reg. No.
+- NGO ID / Project ID / Certificate Number
+- FCRA Number / 12A / 80G registration
+- Society registration / Trust registration number
+Examples: "NGO-2024-001", "MH/12345/2019", "FCRA-2021-0034"
+Set ngoId = null if document is a corporate CSR requirement (not an NGO proposal) or if no ID is found.
+Never fabricate an ID — only extract what is explicitly written.
+
 ## CRITICAL RULES
 1. Never fabricate numbers or names — extract only what is in the document
 2. Use null for genuinely missing values, never guess

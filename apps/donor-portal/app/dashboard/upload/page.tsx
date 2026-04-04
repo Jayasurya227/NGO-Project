@@ -213,10 +213,10 @@ export default function UploadRFPPage() {
                 <div>
                   <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                   <p className="text-sm font-medium text-slate-700">Click to browse or drag and drop</p>
-                  <p className="text-xs text-slate-400 mt-1">PDF, DOCX — Max 50 MB</p>
+                  <p className="text-xs text-slate-400 mt-1">PDF, DOCX, images, Excel, or any document — Max 50 MB</p>
                 </div>
               )}
-              <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden"
+              <input ref={fileRef} type="file" accept="*" className="hidden"
                 onChange={e => { const f = e.target.files?.[0]; if (f) { setFile(f); setErrors({}); } }} />
             </div>
             {file && (

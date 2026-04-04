@@ -5,16 +5,6 @@ import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { apiFetch, api } from '@/lib/api'
 
-const SDG_MAP: Record<string, string> = {
-  'NO_POVERTY': 'SDG 1: No Poverty',
-  'ZERO_HUNGER': 'SDG 2: Zero Hunger',
-  'GOOD_HEALTH': 'SDG 3: Good Health',
-  'QUALITY_EDUCATION': 'SDG 4: Quality Education',
-  'GENDER_EQUALITY': 'SDG 5: Gender Equality',
-  'CLEAN_WATER': 'SDG 6: Clean Water',
-  'REDUCED_INEQUALITY': 'SDG 10: Reduced Inequality'
-}
-
 const SECTOR_MAP: Record<string, string> = {
   'EDUCATION': 'Education',
   'HEALTHCARE': 'Healthcare',
@@ -28,27 +18,6 @@ const SECTOR_MAP: Record<string, string> = {
 
 const SECTORS = ['EDUCATION', 'HEALTHCARE', 'LIVELIHOOD', 'ENVIRONMENT', 'WATER_SANITATION', 'INFRASTRUCTURE', 'WOMEN_EMPOWERMENT', 'CHILD_WELFARE', 'OTHER']
 
-const SECTOR_PREFIX: Record<string, string> = {
-  EDUCATION:         'EDU',
-  HEALTHCARE:        'HLT',
-  LIVELIHOOD:        'LVL',
-  ENVIRONMENT:       'ENV',
-  WATER_SANITATION:  'WSH',
-  INFRASTRUCTURE:    'INF',
-  WOMEN_EMPOWERMENT: 'WEM',
-  CHILD_WELFARE:     'CWL',
-  OTHER:             'OTH',
-}
-
-function getDisplayId(initiative: Initiative): string {
-  const prefix  = SECTOR_PREFIX[initiative.sector] ?? 'OTH'
-  const yearVal = initiative.createdAt ? new Date(initiative.createdAt).getFullYear() : new Date().getFullYear()
-  const year    = isNaN(yearVal) ? new Date().getFullYear() : yearVal
-  const clean   = (initiative.id ?? '').replace(/-/g, '')
-  const raw     = parseInt(clean.slice(-8) || 'f', 16)
-  const num     = (isNaN(raw) ? 1 : raw % 9000) + 1000
-  return `${prefix}-${year}-${num}`
-}
 
 type Mode = 'manual' | 'upload'
 
@@ -97,10 +66,10 @@ function FileUploadBox({ file, setFile }: { file: File | null; setFile: (f: File
           <div>
             <p className="text-3xl mb-2">📁</p>
             <p className="text-sm font-medium text-gray-700">Click to browse or drag and drop</p>
-            <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX — Max 50 MB</p>
+            <p className="text-xs text-gray-400 mt-1">PDF, DOCX, images, Excel, or any document — Max 50 MB</p>
           </div>
         )}
-        <input ref={ref} type="file" accept=".pdf,.doc,.docx" className="hidden"
+        <input ref={ref} type="file" accept="*" className="hidden"
           onChange={e => { const f = e.target.files?.[0]; if (f) setFile(f) }} />
       </div>
       {file && <p className="text-xs text-green-600 mt-2">✓ AI will extract all fields from this document automatically</p>}
@@ -125,8 +94,8 @@ function CreateInitiativeModal({ onClose, onSuccess }: { onClose: () => void; on
   })
 
   const set = (k: string) => (e: any) => setForm(f => ({ ...f, [k]: e.target.value }))
-  const ginp = (err?: string) => `w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none ${err ? 'border-red-400 bg-red-50' : 'border-gray-300'}`
-  const gsel = () => `w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-500 focus:outline-none bg-white`
+  const ginp = (err?: string) => `w-full border rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-green-500 focus:outline-none ${err ? 'border-red-400 bg-red-50' : 'border-gray-300'}`
+  const gsel = () => `w-full border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-green-500 focus:outline-none bg-white`
   const lbl = (text: string, required = false) => (
     <label className="block text-xs font-medium text-gray-600 mb-1">
       {text}{required && <span className="text-red-500 ml-0.5">*</span>}
@@ -349,6 +318,7 @@ function CreateInitiativeModal({ onClose, onSuccess }: { onClose: () => void; on
 
 interface Initiative {
   id: string
+  ngoId: string | null
   title: string
   description: string
   status: string
@@ -366,6 +336,9 @@ export default function InitiativesPage() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [editingNgoId, setEditingNgoId] = useState<string | null>(null)   // initiative id being edited
+  const [ngoIdDraft, setNgoIdDraft]     = useState('')
+  const [savingNgoId, setSavingNgoId]   = useState<string | null>(null)
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['initiatives'],
@@ -373,6 +346,19 @@ export default function InitiativesPage() {
   })
 
   const initiatives = data?.data || []
+
+  async function saveNgoId(initiativeId: string) {
+    setSavingNgoId(initiativeId)
+    try {
+      await api.patch(`/api/initiatives/${initiativeId}`, { ngoId: ngoIdDraft.trim() || null })
+      await refetch()
+      setEditingNgoId(null)
+    } catch {
+      alert('Failed to save NGO ID')
+    } finally {
+      setSavingNgoId(null)
+    }
+  }
 
   const handleDeleteInitiative = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this initiative?')) return
@@ -436,6 +422,9 @@ export default function InitiativesPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">
+                NGO ID
+              </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
                 Title
               </th>
@@ -445,8 +434,8 @@ export default function InitiativesPage() {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
                 Sector
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[220px]">
-                SDG Tags
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
+                Beneficiaries
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
                 Budget Required
@@ -462,7 +451,7 @@ export default function InitiativesPage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredInitiatives.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
                   No initiatives found
                 </td>
               </tr>
@@ -473,6 +462,37 @@ export default function InitiativesPage() {
                   className="hover:bg-gray-50 cursor-pointer"
                   onClick={() => router.push(`/dashboard/initiatives/${initiative.id}`)}
                 >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono" onClick={e => e.stopPropagation()}>
+                    {editingNgoId === initiative.id ? (
+                      <div className="flex items-center gap-1">
+                        <input
+                          autoFocus
+                          value={ngoIdDraft}
+                          onChange={e => setNgoIdDraft(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') saveNgoId(initiative.id); if (e.key === 'Escape') setEditingNgoId(null) }}
+                          className="w-28 border border-blue-400 rounded px-1.5 py-0.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder="NGO-XXXX"
+                        />
+                        <button
+                          onClick={() => saveNgoId(initiative.id)}
+                          disabled={savingNgoId === initiative.id}
+                          className="text-[10px] text-white bg-blue-600 hover:bg-blue-700 px-1.5 py-0.5 rounded disabled:opacity-50">
+                          {savingNgoId === initiative.id ? '...' : 'Save'}
+                        </button>
+                        <button onClick={() => setEditingNgoId(null)} className="text-[10px] text-gray-500 hover:text-gray-800">✕</button>
+                      </div>
+                    ) : (
+                      <span
+                        title="Click to edit NGO ID"
+                        onClick={() => { setEditingNgoId(initiative.id); setNgoIdDraft(initiative.ngoId ?? '') }}
+                        className="cursor-pointer group flex items-center gap-1">
+                        <span className={initiative.ngoId ? 'text-gray-700' : 'text-gray-400'}>
+                          {initiative.ngoId ?? '—'}
+                        </span>
+                        <span className="text-[10px] text-gray-300 group-hover:text-blue-400">✎</span>
+                      </span>
+                    )}
+                  </td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">
                       {initiative.title}

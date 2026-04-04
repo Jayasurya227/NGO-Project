@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '../../../lib/api'
 import { format } from 'date-fns'
+import toast from 'react-hot-toast'
 
 const STATUS_COLOURS: Record<string, string> = {
   PENDING_EXTRACTION: 'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -12,6 +13,7 @@ const STATUS_COLOURS: Record<string, string> = {
   MATCHED:            'bg-purple-50 text-purple-700 border-purple-200',
   CONTRACTED:         'bg-indigo-50 text-indigo-700 border-indigo-200',
   CLOSED:             'bg-gray-50 text-gray-600 border-gray-200',
+  REJECTED:           'bg-red-50 text-red-700 border-red-200',
 }
 
 const ACTION_NEEDED = ['EXTRACTED', 'NEEDS_REVIEW']
@@ -38,14 +40,34 @@ export default function RequirementsPage() {
   const [total, setTotal]               = useState(0)
   const [loading, setLoading]           = useState(true)
   const [filter, setFilter]             = useState<'all' | 'action' | 'running' | 'done'>('all')
+  const [deleting, setDeleting]         = useState<string | null>(null)
 
-  useEffect(() => {
+  function loadRequirements() {
     api.get('/api/requirements?limit=100').then(r => {
       setRequirements(r.data?.requirements ?? [])
       setTotal(r.data?.total ?? 0)
       setLoading(false)
     })
-  }, [])
+  }
+
+  useEffect(() => { loadRequirements() }, [])
+
+  async function handleDelete(e: React.MouseEvent, id: string, name: string) {
+    e.stopPropagation()
+    if (!window.confirm(`Delete requirement "${name}"?\n\nThis cannot be undone.`)) return
+    setDeleting(id)
+    try {
+      const res = await api.delete(`/api/requirements/${id}`)
+      if (!res.success) throw new Error(res.error?.message || 'Failed to delete')
+      toast.success('Requirement deleted')
+      setRequirements(prev => prev.filter(r => r.id !== id))
+      setTotal(prev => prev - 1)
+    } catch (err: any) {
+      toast.error(err.message || 'Delete failed')
+    } finally {
+      setDeleting(null)
+    }
+  }
 
   const filtered = requirements.filter(r => {
     if (filter === 'action')  return ACTION_NEEDED.includes(r.status)
@@ -139,6 +161,7 @@ export default function RequirementsPage() {
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Pipeline Status</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">DRM Action</th>
                 <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Submitted</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -215,9 +238,22 @@ export default function RequirementsPage() {
                       {req.status === 'CONTRACTED' && (
                         <span className="text-xs text-indigo-600">📄 Contracted</span>
                       )}
+                      {req.status === 'REJECTED' && (
+                        <span className="text-xs font-semibold text-red-600 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
+                          ❌ No fields matched — invalid document
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400">
                       {format(new Date(req.createdAt), 'dd MMM yyyy')}
+                    </td>
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={e => handleDelete(e, req.id, fields?.companyName || req.donor?.orgName || req.id)}
+                        disabled={deleting === req.id}
+                        className="text-red-600 hover:text-red-900 text-xs font-medium disabled:opacity-40">
+                        {deleting === req.id ? 'Deleting...' : 'Delete'}
+                      </button>
                     </td>
                   </tr>
                 )

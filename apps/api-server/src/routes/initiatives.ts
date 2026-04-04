@@ -41,23 +41,25 @@ const StatusUpdateBody = z.object({
 const getDocxParser = async () => (await import("mammoth")).default;
 const getPdfParser  = async () => { const m = await import("pdf-parse"); return (m as any).default || m; };
 
-async function extractInitiativeFieldsWithAI(documentText: string, fileName: string) {
+async function extractInitiativeFieldsWithAI(
+  documentText: string,
+  fileName: string,
+  fileBuffer?: Buffer,
+  fileMimeType?: string,
+) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
   if (!apiKey) return null;
 
-  const model  = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
-  const url    = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
+  const url   = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  const prompt = `You are an expert at extracting structured data from NGO project proposal documents.
+  const promptText = `You are an expert at extracting structured data from NGO project proposal documents.
 Extract the following fields from this NGO initiative document and return ONLY valid JSON:
-
-=== DOCUMENT ===
-${documentText.slice(0, 15000)}
-=== END ===
 
 Return this exact JSON structure:
 {
   "title": "Short descriptive title of the initiative (max 100 chars)",
+  "ngoId": "NGO registration or project ID found in the document, e.g. NGO-2024-001 or null if not found",
   "sector": "EDUCATION",
   "state": "Maharashtra",
   "district": "Pune",
@@ -73,15 +75,32 @@ Rules:
 - budgetRequired in rupees (1 lakh = 100000, 1 crore = 10000000). Use 0 if not mentioned.
 - targetBeneficiaries is a number. Use 100 if not mentioned.
 - sdgTags: 1-3 tags from: NO_POVERTY, ZERO_HUNGER, GOOD_HEALTH, QUALITY_EDUCATION, GENDER_EQUALITY, CLEAN_WATER, REDUCED_INEQUALITY. Infer from context.
+- ngoId: look for registration numbers, project IDs, NGO IDs, FCRA numbers, or ANY identifier labeled as ID / Reg. No / Project No / Certificate No. Use null if not found.
 - If field not found, use reasonable defaults.
 - title: use "${fileName.replace(/\.[^.]+$/, "")}" if no clear title in the document.`;
+
+  // Decide whether to send text or the raw file to Gemini
+  const isUsableText = documentText && documentText.length > 100 && !documentText.startsWith("%PDF");
+
+  let parts: any[];
+  if (isUsableText) {
+    parts = [{ text: `${promptText}\n\n=== DOCUMENT ===\n${documentText.slice(0, 15000)}\n=== END ===` }];
+  } else if (fileBuffer && fileMimeType) {
+    // Scanned / image-based PDF — use Gemini multimodal
+    parts = [
+      { inlineData: { mimeType: fileMimeType, data: fileBuffer.toString("base64") } },
+      { text: promptText },
+    ];
+  } else {
+    return null;
+  }
 
   try {
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ parts }],
         generationConfig: { responseMimeType: "application/json" },
       }),
     });
@@ -101,23 +120,36 @@ export async function initiativesRoutes(app: FastifyInstance) {
     const tenantId = (req as any).tenantId;
     let fileBuffer: Buffer | null = null;
     let fileName = "document";
+    let fileMimeType = "application/octet-stream";
     let fileText = "";
 
     try {
       const parts = (req as any).parts();
       for await (const part of parts) {
         if (part.type === "file") {
-          fileBuffer = await part.toBuffer();
-          fileName   = part.filename ?? "document";
+          fileBuffer   = await part.toBuffer();
+          fileName     = part.filename ?? "document";
+          fileMimeType = part.mimetype ?? "application/octet-stream";
           try {
-            if (fileName.toLowerCase().endsWith(".docx")) {
+            const fn = fileName.toLowerCase();
+            if (fn.endsWith(".docx") || fn.endsWith(".doc")) {
               const mammoth = await getDocxParser();
               fileText = (await mammoth.extractRawText({ buffer: fileBuffer })).value;
-            } else if (fileName.toLowerCase().endsWith(".pdf")) {
+            } else if (fn.endsWith(".pdf")) {
               const pdfParse = await getPdfParser();
               fileText = (await pdfParse(fileBuffer)).text;
-            } else {
+              fileMimeType = "application/pdf";
+            } else if (fn.endsWith(".txt") || fn.endsWith(".csv") || fn.endsWith(".md")) {
               fileText = fileBuffer.toString("utf-8").slice(0, 15000);
+            } else if (fn.endsWith(".xlsx") || fn.endsWith(".xls")) {
+              try {
+                const str = fileBuffer.toString("utf-8");
+                const matches = str.match(/<t[^>]*>([^<]+)<\/t>/g) ?? [];
+                fileText = matches.map((m: string) => m.replace(/<[^>]+>/g, "")).join(" ").slice(0, 15000);
+              } catch { fileText = ""; }
+            } else {
+              const attempt = fileBuffer.toString("utf-8").slice(0, 15000);
+              fileText = /[\x00-\x08\x0E-\x1F]/.test(attempt.slice(0, 200)) ? "" : attempt;
             }
           } catch { fileText = ""; }
         }
@@ -129,10 +161,9 @@ export async function initiativesRoutes(app: FastifyInstance) {
     if (!fileBuffer) {
       return reply.status(400).send({ success: false, error: { code: "VALIDATION_ERROR", message: "File is required" } });
     }
-    // Allow scanned PDFs — Gemini will read them via base64 multimodal
 
-    // AI extraction
-    const extracted = await extractInitiativeFieldsWithAI(fileText, fileName);
+    // AI extraction — falls back to multimodal (base64) for scanned PDFs
+    const extracted = await extractInitiativeFieldsWithAI(fileText, fileName, fileBuffer, fileMimeType);
     console.log("[initiative-upload] AI extracted:", extracted);
 
     const VALID_SECTORS = ["EDUCATION","HEALTHCARE","LIVELIHOOD","ENVIRONMENT","WATER_SANITATION","INFRASTRUCTURE","WOMEN_EMPOWERMENT","CHILD_WELFARE","OTHER"];
@@ -145,10 +176,22 @@ export async function initiativesRoutes(app: FastifyInstance) {
       : [];
     const sdgTags = sanitizedSdgTags.length > 0 ? sanitizedSdgTags : ["QUALITY_EDUCATION"];
 
+    // Validate ngoId — reject garbage (sentences, very long strings, binary junk)
+    const rawNgoId = extracted?.ngoId;
+    const ngoId = (
+      rawNgoId &&
+      typeof rawNgoId === "string" &&
+      rawNgoId.trim().length > 0 &&
+      rawNgoId.trim().length <= 60 &&          // IDs are short
+      !/\s{2,}/.test(rawNgoId) &&              // no multiple spaces (sentence garbage)
+      rawNgoId.trim().split(" ").length <= 6   // max 6 words
+    ) ? rawNgoId.trim() : null;
+
     const initiative = await prisma.initiative.create({
       data: {
         tenantId,
         title:               extracted?.title       || fileName.replace(/\.[^.]+$/, ""),
+        ngoId,
         sector:              sector as any,
         geography:           { state: extracted?.state || "India", district: extracted?.district || "" },
         description:         extracted?.description || (fileText && !fileText.startsWith('%PDF') ? fileText.slice(0, 1000) : '') || `Uploaded from: ${fileName}`,
@@ -164,7 +207,7 @@ export async function initiativesRoutes(app: FastifyInstance) {
     await prisma.agentJobLog.upsert({
       where: { jobId: embedJob.id! },
       update: { status: "QUEUED" },
-      create: { tenantId, jobId: embedJob.id!, agentName: "initiative-embedder", status: "QUEUED" },
+      create: { tenantId, jobId: embedJob.id!, agentName: "initiative-embedder", status: "QUEUED", modelVersion: "gemini-embedding-001", promptHash: "n/a" },
     });
 
     await auditLog({
@@ -203,8 +246,8 @@ export async function initiativesRoutes(app: FastifyInstance) {
           geography: true, budgetRequired: true, budgetFunded: true,
           targetBeneficiaries: true, sdgTags: true, createdAt: true,
           startDate: true, endDate: true, description: true,
+          ngoId: true,
           tenant: { select: { name: true } }
-
         },
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
@@ -351,6 +394,24 @@ export async function initiativesRoutes(app: FastifyInstance) {
     });
 
     return reply.send({ success: true, data: { status, initiativeId: id } });
+  });
+
+  // PATCH /:id — partial update (e.g. ngoId inline edit)
+  app.patch("/:id", { preHandler: requirePermission("initiative:update") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
+    const { id } = req.params as { id: string };
+    const body = req.body as { ngoId?: string | null };
+
+    const initiative = await prisma.initiative.findFirst({ where: { id, tenantId } });
+    if (!initiative) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Initiative not found" } });
+
+    const updated = await prisma.initiative.update({
+      where: { id },
+      data: { ...(body.ngoId !== undefined && { ngoId: body.ngoId }) },
+      select: { id: true, ngoId: true },
+    });
+
+    return reply.send({ success: true, data: updated });
   });
 
   // DELETE /:id (becomes /api/initiatives/:id)

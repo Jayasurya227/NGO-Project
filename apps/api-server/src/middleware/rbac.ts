@@ -41,9 +41,9 @@ const PERMISSIONS: Record<string, string[]> = {
     "story:read", "story:approve",
   ],
   DRM: [
-    "donor:read", "donor:create", "donor:update",
-    "requirement:read", "requirement:create", "requirement:update",
-    "initiative:read", "initiative:create", "initiative:update",
+    "donor:read", "donor:create", "donor:update", "donor:delete",
+    "requirement:read", "requirement:create", "requirement:update", "requirement:delete",
+    "initiative:read", "initiative:create", "initiative:update", "initiative:delete",
     "content:read", "content:approve",
     "agent:read",
     "milestone:read",
