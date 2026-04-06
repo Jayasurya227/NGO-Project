@@ -22,7 +22,7 @@ export default function DonorStoriesPage() {
     <div className="p-8 max-w-4xl mx-auto">
       <header className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">Your Impact Stories</h1>
-        <p className="text-slate-500">Real-world updates from the field, powered by your partnership.</p>
+        <p className="text-slate-700">Real-world updates from the field, powered by your partnership.</p>
       </header>
 
       {stories.length === 0 ? (
@@ -44,14 +44,14 @@ export default function DonorStoriesPage() {
                   <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
                     {story.initiative?.sector || 'IMPACT'}
                   </span>
-                  <div className="flex items-center text-slate-400 text-xs gap-1">
+                  <div className="flex items-center text-slate-700 text-xs gap-1">
                     <Calendar className="w-3 h-3" />
                     {new Date(story.createdAt).toLocaleDateString()}
                   </div>
                 </div>
                 
                 <h2 className="text-xl font-bold text-slate-900 mb-3">{story.contentJson?.title || 'Impact Update'}</h2>
-                <div className="prose prose-sm text-slate-600 mb-6 max-w-none">
+                <div className="prose prose-sm text-slate-700 mb-6 max-w-none">
                   {story.contentJson?.body || story.contentJson?.text || 'Loading story content...'}
                 </div>
 
@@ -61,11 +61,11 @@ export default function DonorStoriesPage() {
                       <Heart className="w-4 h-4 text-rose-500" />
                     </div>
                     <div>
-                      <p className="text-[10px] text-slate-400 font-medium uppercase">Dignity Score</p>
+                      <p className="text-[10px] text-slate-600 font-medium uppercase">Dignity Score</p>
                       <p className="text-xs font-bold text-slate-900">{story.dignityScore || '9.8'}/10</p>
                     </div>
                   </div>
-                  <button className="flex items-center gap-2 text-slate-500 hover:text-emerald-600 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors">
+                  <button className="flex items-center gap-2 text-slate-700 hover:text-emerald-600 text-xs font-medium px-3 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors">
                     <Share2 className="w-3.5 h-3.5" />
                     Share Progress
                   </button>

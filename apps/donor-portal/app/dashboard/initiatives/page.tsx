@@ -67,7 +67,7 @@ export default function DonorInitiativesPage() {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="mb-10">
         <h1 className="text-3xl font-bold text-slate-900 mb-2">Explore Initiatives</h1>
-        <p className="text-slate-500">Discover handpicked NGO projects ready for your CSR contribution.</p>
+        <p className="text-slate-700">Discover handpicked NGO projects ready for your CSR contribution.</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -100,7 +100,7 @@ export default function DonorInitiativesPage() {
 
       {filteredInitiatives.length === 0 ? (
         <div className="bg-white border rounded-2xl p-20 text-center">
-          <p className="text-slate-400 font-medium">No initiatives found matching your criteria.</p>
+          <p className="text-slate-700 font-medium">No initiatives found matching your criteria.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
@@ -125,13 +125,13 @@ export default function DonorInitiativesPage() {
                 </div>
                 
                 <div className="p-6 flex-1 flex flex-col">
-                  <p className="text-slate-500 text-xs line-clamp-2 mb-4">
+                  <p className="text-slate-700 text-xs line-clamp-2 mb-4">
                     {(init.description?.startsWith('%PDF') || init.description?.includes('endobj'))
                       ? 'Building sustainable impact through community-led development and resource optimization.'
                       : (init.description || 'Building sustainable impact through community-led development and resource optimization.')}
                   </p>
 
-                  <div className="flex items-center gap-2 text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-4">
+                  <div className="flex items-center gap-2 text-slate-700 text-[10px] font-bold uppercase tracking-widest mb-4">
 
                     <MapPin className="w-3 h-3" />
                     {init.geography.state}{init.geography.district ? `, ${init.geography.district}` : ''}
@@ -140,7 +140,7 @@ export default function DonorInitiativesPage() {
                   <div className="space-y-4">
                     <div>
                       <div className="flex justify-between text-xs mb-1.5">
-                        <span className="text-slate-500 font-bold uppercase tracking-wider">Funding Goal</span>
+                        <span className="text-slate-700 font-bold uppercase tracking-wider">Funding Goal</span>
                         <span className="text-slate-900 font-bold">₹{init.budgetRequired.toLocaleString()}</span>
                       </div>
                       <div className="h-2 bg-slate-100 rounded-full overflow-hidden">

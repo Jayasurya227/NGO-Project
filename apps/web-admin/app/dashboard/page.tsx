@@ -33,13 +33,13 @@ export default function DashboardPage() {
               <Icon size={18} />
             </div>
             <p className="text-2xl font-semibold text-gray-900">{value}</p>
-            <p className="text-sm text-gray-500 mt-0.5">{label}</p>
+            <p className="text-sm text-gray-700 mt-0.5">{label}</p>
           </div>
         ))}
       </div>
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h3 className="text-sm font-medium text-gray-700 mb-1">Quick start</h3>
-        <p className="text-sm text-gray-500">Use <strong>Agent Jobs</strong> in the sidebar to upload donor documents or NGO initiative files and start the AI pipeline.</p>
+        <p className="text-sm text-gray-700">Use <strong>Agent Jobs</strong> in the sidebar to upload donor documents or NGO initiative files and start the AI pipeline.</p>
       </div>
     </div>
   )

@@ -378,6 +378,357 @@ Workers run in the background processing AI tasks. Start them with `.\start-work
 
 ---
 
+## 13. Example Input Flow (End-to-End Walkthrough)
+
+This section walks through a complete real-world usage scenario after the application is running.
+
+---
+
+### Step 1 — Admin uploads an NGO Initiative
+
+**Who:** DRM staff or NGO Admin  
+**Where:** Admin Portal → **CSR Intake** (sidebar)
+
+1. Open http://localhost:3000 and log in as admin
+2. Go to **CSR Intake** in the sidebar
+3. Click **Upload Document** and select an NGO PDF (e.g. `shiksha-initiative-2024.pdf`)
+4. The AI Extraction Agent reads the PDF and auto-fills:
+   - **NGO ID** (e.g. `SHIKSHA-EDU-2024`)
+   - **Title** (e.g. `Digital Literacy for Rural Girls`)
+   - **Sector** → `EDUCATION`
+   - **Geography** → `Uttar Pradesh, Varanasi`
+   - **Budget** → ₹25L – ₹50L
+   - **SDG Tags** → `SDG 4`, `SDG 5`
+5. Initiative appears in **NGO Initiatives** table with all fields populated
+
+---
+
+### Step 2 — Donor submits an RFP from the Donor Portal
+
+**Who:** CSR/Donor company  
+**Where:** Donor Portal → **Submit RFP** (sidebar)
+
+1. Open http://localhost:3002 and log in (e.g. `donor@tcs.com`, subdomain: `shiksha-foundation`)
+2. Go to **Submit RFP**
+3. Choose **Upload Document** and upload a CSR RFP PDF (e.g. `tcs-csr-rfp-2024.pdf`)
+   - OR choose **Fill Form Manually** and enter:
+     - Sector: `EDUCATION`
+     - State: `Uttar Pradesh`, District: `Varanasi`
+     - Budget: ₹20L min – ₹60L max
+     - KPI 1: `500 girls enrolled in digital literacy program`
+4. Click **Upload & Start AI Analysis**
+5. Status shows **Pending Extraction** → changes to **Extracted** once AI finishes
+
+---
+
+### Step 3 — DRM reviews and validates the submission
+
+**Who:** DRM staff  
+**Where:** Admin Portal → **DRM Workspace**
+
+1. Go to **DRM Workspace** in Admin Portal
+2. Find the submission with status **EXTRACTED** — orange highlight means action needed
+3. Click the row to open the **Correction Form**
+4. Review AI-extracted fields and confidence scores:
+   - Green border = high confidence (no action needed)
+   - Red border = low confidence (review and correct the value)
+5. Fix any incorrect fields (e.g. correct the sector or geography)
+6. Click **Validate & Start Gap Analysis →**
+7. Status moves to **VALIDATED** → AI Gap Diagnoser runs automatically
+
+---
+
+### Step 4 — AI Matching runs and finds best NGO initiatives
+
+**Who:** Automated (background worker)  
+**What happens automatically after validation:**
+
+1. **Gap Diagnoser** compares donor requirements vs NGO capabilities
+2. **Matching Agent** scores all NGO initiatives against the requirement
+3. Top 3 matches are ranked: 🥇 Best / 🥈 2nd / 🥉 3rd
+4. Status moves to **MATCHED**
+
+---
+
+### Step 5 — DRM reviews matches and approves pitch deck
+
+**Who:** DRM staff  
+**Where:** Admin Portal → **DRM Workspace** → click matched row
+
+1. Open the matched requirement row
+2. Scroll to **Match Results** — see ranked initiatives with scores:
+   - Score breakdown: Great Fit / Decent Fit / Weak Fit
+   - Emoji ratings: Excellent / Good / Partial / Weak
+3. Click **Approve & Generate Pitch Deck** on the best match
+4. AI Pitch Deck Agent generates a 5-slide PPTX:
+   - Slide 1: Cover
+   - Slide 2: Problem + NGO Overview + Needs
+   - Slide 3: Solution + Gap Analysis + Milestones
+   - Slide 4: Budget + Impact + Monitoring + Risks
+   - Slide 5: Credibility + Funding Ask + Authorization
+5. Go to **Proposal Approvals** sidebar → approve the pitch deck
+6. Status moves to **APPROVED**
+
+---
+
+### Step 6 — Donor downloads the pitch deck
+
+**Who:** CSR/Donor company  
+**Where:** Donor Portal → **Impact Overview**
+
+1. Log in to Donor Portal (http://localhost:3002)
+2. On **Impact Overview**, the right sidebar shows **Your Pitch Decks**
+3. Approved pitch deck shows with a green **Download PPTX** button
+4. Click to download the generated presentation
+
+---
+
+### Step 7 — Donor asks a question about an initiative
+
+**Who:** CSR/Donor company  
+**Where:** Donor Portal → **Initiatives**
+
+1. Go to **Initiatives** in Donor Portal
+2. Browse and click any NGO initiative card
+3. Click **Need more information** button
+4. Type a question (e.g. *"Does this program cover Varanasi district specifically?"*)
+5. DRM staff sees this in Admin Portal → **Donor Inquiries**
+6. DRM types a response and clicks **Respond**
+7. Donor sees the answer under **My Inquiries** in their portal
+
+---
+
+### Summary of Roles
+
+| Role | Portal | What they do |
+|---|---|---|
+| **NGO Admin / DRM** | Admin Portal (port 3000) | Upload NGO docs, review extractions, validate, approve pitch decks, respond to inquiries |
+| **CSR / Donor** | Donor Portal (port 3002) | Submit RFPs, track status, download pitch decks, ask questions |
+| **AI Workers** | Background (auto) | Extract fields, match initiatives, generate gap analysis + pitch decks |
+
+---
+
+## 14. UI Workflow — What You See on Screen
+
+This section shows exactly what appears on each page as users move through the platform.
+
+---
+
+### Admin Portal Workflow (http://localhost:3000)
+
+#### Screen 1 — Dashboard
+After logging in you land on the Dashboard.
+- 4 stat cards: **Total Donors**, **Requirements**, **NGO Initiatives**, **AI Agents**
+- Numbers update in real-time as data is added
+- Sidebar on the left shows all navigation sections
+
+```
+Sidebar sections:
+  Overview      → Dashboard
+  Management    → NGO Initiatives | DRM Workspace | Donor Inquiries
+  AI & Matching → Proposal Approvals | CSR Intake | Delete Records
+```
+
+---
+
+#### Screen 2 — CSR Intake (Upload Documents)
+**Sidebar → CSR Intake**
+
+What you see:
+- A mode toggle: **Upload Document** or **Fill Form Manually**
+- Upload mode: drag-and-drop box — supports PDF, DOCX, images, Excel, any file
+- After upload: a green progress indicator → status changes to **Pending Extraction**
+- Workers terminal shows: `[requirements-analyst] Calling Gemini model...`
+- Once done: status changes to **Extracted** and fields appear in DRM Workspace
+
+---
+
+#### Screen 3 — NGO Initiatives Table
+**Sidebar → NGO Initiatives**
+
+What you see after uploading an NGO document:
+```
+| NGO ID          | Title                          | Status  | Sector    | Beneficiaries | Budget    | Start Date |
+|-----------------|-------------------------------|---------|-----------|---------------|-----------|------------|
+| SHIKSHA-EDU-24  | Digital Literacy Rural Girls   | ACTIVE  | EDUCATION | 1,200         | ₹30,00,000| 01/06/2024 |
+```
+- Click **NGO ID cell** to inline-edit the ID directly in the table
+- Click **View** to open full initiative detail
+- Green badge = ACTIVE, Blue = IN_PROGRESS, Gray = DRAFT
+
+---
+
+#### Screen 4 — DRM Workspace
+**Sidebar → DRM Workspace**
+
+What you see:
+- 3 stat cards at top: **All Submissions** | **⏳ AI Running** | **✅ Matched / Done**
+- Table rows colour-coded:
+  - 🟠 Orange highlight = needs your review (EXTRACTED or NEEDS REVIEW)
+  - White = AI running or already done
+- Each row shows: Submitted By, Type (NGO/Donor), Sector, Geography, Budget, Pipeline Status, DRM Action
+
+Pipeline status badges you will see:
+```
+PENDING EXTRACTION  → yellow  → AI is reading the document
+EXTRACTED           → blue    → Ready for DRM review
+NEEDS REVIEW        → orange  → DRM must correct low-confidence fields
+VALIDATED           → green   → Gap analysis running
+MATCHED             → purple  → Best NGO initiatives found
+CONTRACTED          → indigo  → Deal in progress
+REJECTED            → red     → Document had zero readable fields
+```
+
+---
+
+#### Screen 5 — DRM Correction Form (Requirement Detail)
+**Click any EXTRACTED or NEEDS REVIEW row**
+
+What you see:
+- All AI-extracted fields displayed as editable inputs
+- **Red border** on a field = AI confidence is low → you must review it
+- **Green border** = high confidence → no action needed
+- Confidence score shown as a % badge on each field
+- Two action buttons at the bottom:
+  - **📨 Request Resubmission** → opens a text box to send a note to the donor
+  - **Validate & Start Gap Analysis →** → locks the fields and starts matching
+
+---
+
+#### Screen 6 — Match Results
+**Open a MATCHED requirement row**
+
+What you see:
+```
+Top Matches for: TCS CSR RFP 2024
+
+🥇 Best Match    Digital Literacy Rural Girls    Score: 91%   ✅ Excellent
+🥈 2nd Match     Girls Education Varanasi        Score: 78%   ✅ Good
+🥉 3rd Match     Rural Skill Dev Maharashtra     Score: 54%   ⚠ Partial
+```
+- Each match shows a plain-language score breakdown (sector fit, geography fit, budget fit)
+- Click **Approve & Generate Pitch Deck** → AI generates a PPTX in the background
+
+---
+
+#### Screen 7 — Proposal Approvals
+**Sidebar → Proposal Approvals**
+
+What you see:
+- List of all AI-generated pitch decks with status badges (PENDING REVIEW / APPROVED)
+- Click a pitch deck row → opens detail page with **Approve** button
+- Once approved: donors can download it from their portal
+
+---
+
+#### Screen 8 — Donor Inquiries
+**Sidebar → Donor Inquiries**
+
+What you see:
+- Cards for each question a donor sent from the Donor Portal
+- Shows: donor org name, date, the question text, which initiative it's about
+- Click **Respond** → type your answer → click **Send Response**
+- Answered inquiries show a green **✅ Responded** badge
+
+---
+
+### Donor Portal Workflow (http://localhost:3002)
+
+#### Screen 1 — Impact Overview (Home)
+After logging in donors see:
+- 3 stat cards: **Active Initiatives**, **Impact Milestones**, **Lives Impacted**
+- **Your Submissions** list — shows all RFPs with live status badges
+- **Latest Impact Stories** — 2 most recent field stories
+- Right sidebar: **Funding Status** + **Your Pitch Decks** (download button when approved)
+
+Status badges donors see on their submissions:
+```
+PENDING EXTRACTION  → amber   → Being processed
+EXTRACTED / VALIDATED → blue  → Under DRM review
+MATCHED             → green   → Best NGO found, pitch deck coming
+REJECTED            → red     → ❌ Rejected — document unreadable
+Resubmission Required → orange → DRM asked for a new document
+```
+
+---
+
+#### Screen 2 — Submit RFP
+**Sidebar → Submit RFP**
+
+What donors see:
+- Two mode buttons: **✍️ Fill Form Manually** | **📁 Upload Document**
+- Upload mode: drag-and-drop any file → click **Upload & Start AI Analysis**
+- Manual mode: 8 sections to fill —
+  1. Preferred Sectors (checkbox pills)
+  2. Preferred Geography (state / district / location)
+  3. Financial Parameters (min/max budget in INR)
+  4. Project Duration (months)
+  5. KPIs / Desired Outcomes
+  6. Reporting Requirements
+  7. Compliance (CSR Schedule VII)
+  8. Additional Notes
+- After submit: green success screen → **Submit Another** button
+
+---
+
+#### Screen 3 — Initiatives
+**Sidebar → Initiatives**
+
+What donors see:
+- Grid of NGO initiative cards with cover image area
+- Each card shows: Sector badge, NGO name, Title, Geography, Funding progress bar, SDG tags, Target beneficiaries
+- Search bar at top + sector filter pills
+- Click **View Details** → opens full initiative page with **Need more information** button
+
+---
+
+#### Screen 4 — My Inquiries
+**Sidebar → My Inquiries**
+
+What donors see:
+- Cards for each question they asked
+- Badge shows: ✅ **Answered** (green) or ⏳ **Pending Response** (amber)
+- Answered cards show the DRM's response text in a green box
+- Delete button to remove old inquiries
+
+---
+
+#### Screen 5 — Impact Stories
+**Sidebar → Impact Stories**
+
+What donors see:
+- Article cards with: sector tag, date, title, story body text, dignity score
+- **Share Progress** button on each story
+- Empty state if no stories have been published yet
+
+---
+
+### Full Platform Flow Diagram
+
+```
+NGO Admin uploads PDF
+        ↓
+AI extracts fields (Gemini)
+        ↓
+DRM reviews in Workspace → Validates
+        ↓
+Gap Diagnoser runs (auto)
+        ↓
+Matching Agent scores NGO initiatives (auto)
+        ↓
+DRM approves best match → Pitch Deck generated (auto)
+        ↓
+DRM approves Pitch Deck in Proposal Approvals
+        ↓
+Donor downloads PPTX from Donor Portal
+        ↓
+Donor asks questions via Initiatives page
+        ↓
+DRM responds in Donor Inquiries
+```
+
+---
+
 ## Troubleshooting
 
 **App won't start / blank screen**

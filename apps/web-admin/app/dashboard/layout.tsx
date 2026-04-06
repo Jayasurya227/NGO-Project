@@ -69,7 +69,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-900 leading-none truncate">Impact Platform</p>
-            <p className="text-[11px] text-slate-400 font-medium tracking-wider uppercase mt-0.5">Admin Console</p>
+            <p className="text-[11px] text-slate-700 font-medium tracking-wider uppercase mt-0.5">Admin Console</p>
           </div>
         </div>
 
@@ -77,7 +77,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
           {navGroups.map(group => (
             <div key={group.label}>
-              <p className="text-[11px] font-bold text-slate-400 tracking-[0.1em] uppercase px-2 mb-1.5">{group.label}</p>
+              <p className="text-[11px] font-bold text-slate-600 tracking-[0.1em] uppercase px-2 mb-1.5">{group.label}</p>
               <div className="space-y-0.5">
                 {group.items.map(({ href, label, icon: Icon }) => {
                   const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
@@ -104,7 +104,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="border-t border-slate-200 p-2">
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 w-full transition-colors">
+            className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-600 w-full transition-colors">
             <LogOut size={15} className="flex-shrink-0" />
             Sign out
           </button>

@@ -29,7 +29,7 @@ export default function ContentPage() {
     <div className="p-8">
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-900">Content & Approvals</h1>
-        <p className="text-slate-500 text-sm mt-0.5">
+        <p className="text-slate-700 text-sm mt-0.5">
           Review AI-generated pitch decks, email drafts, and reports
         </p>
       </div>
@@ -39,7 +39,7 @@ export default function ContentPage() {
           {[...Array(5)].map((_, i) => <div key={i} className="h-16 bg-slate-100 rounded-lg" />)}
         </div>
       ) : (data?.data?.length ?? 0) === 0 ? (
-        <div className="text-center py-20 text-slate-400 text-sm">
+        <div className="text-center py-20 text-slate-700 text-sm">
           No content generated yet. Approve match results to trigger pitch deck generation.
         </div>
       ) : (
@@ -56,7 +56,7 @@ export default function ContentPage() {
                   <p className="text-sm font-medium text-slate-900">
                     {item.type.replace(/_/g, ' ')}
                   </p>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-600 mt-0.5">
                     {new Date(item.createdAt).toLocaleDateString('en-IN', {
                       day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
                     })}

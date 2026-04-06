@@ -73,7 +73,7 @@ export default function InquiriesPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Donor Inquiries</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage and respond to information requests from donors.</p>
+          <p className="text-sm text-gray-700 mt-1">Manage and respond to information requests from donors.</p>
         </div>
         <div className="bg-blue-50 px-4 py-2 rounded-lg border border-blue-100">
           <p className="text-xs font-bold text-blue-700 uppercase tracking-wider">Total Requests</p>
@@ -84,8 +84,8 @@ export default function InquiriesPage() {
       {inquiries.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 bg-white border-2 border-dashed border-gray-200 rounded-3xl">
           <MessageSquare className="w-12 h-12 text-gray-200 mb-4" />
-          <p className="text-gray-500 font-medium">No inquiries found.</p>
-          <p className="text-sm text-gray-400 mt-1">Inquiries from the "Need more information" button will appear here.</p>
+          <p className="text-gray-700 font-medium">No inquiries found.</p>
+          <p className="text-sm text-gray-700 mt-1">Inquiries from the "Need more information" button will appear here.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
@@ -99,7 +99,7 @@ export default function InquiriesPage() {
                     </div>
                     <div>
                       <h3 className="font-bold text-gray-900">{iq.donorOrg}</h3>
-                      <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+                      <div className="flex items-center gap-2 text-xs text-gray-700 mt-0.5">
                         <Calendar size={12} />
                         {new Date(iq.timestamp).toLocaleString()}
                       </div>
@@ -124,7 +124,7 @@ export default function InquiriesPage() {
                 </div>
 
                 <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 mb-4">
-                  <p className="text-sm font-medium text-gray-500 mb-2 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
+                  <p className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
                     <MessageSquare size={10} />
                     Inquiry Message
                   </p>
@@ -159,7 +159,7 @@ export default function InquiriesPage() {
                     <div className="flex justify-end gap-2 mt-3">
                       <button 
                         onClick={() => setRespondingTo(null)}
-                        className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-gray-700"
+                        className="px-4 py-2 text-sm font-bold text-gray-700 hover:text-gray-900"
                       >
                         Cancel
                       </button>
@@ -177,7 +177,7 @@ export default function InquiriesPage() {
 
                 <div className="mt-4 flex items-center justify-between pt-4 border-t border-gray-100">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Regarding Initiative:</span>
+                    <span className="text-[10px] font-bold text-gray-700 uppercase tracking-widest">Regarding Initiative:</span>
                     <span className="text-xs font-bold text-gray-700 uppercase">{iq.afterState?.initiativeTitle || 'N/A'}</span>
                   </div>
                   {!iq.metadata?.response && respondingTo !== iq.id && (

@@ -84,12 +84,12 @@ export default function RequirementsPage() {
     <div>
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-gray-900">DRM Workspace</h2>
-        <p className="text-sm text-gray-500 mt-0.5">
+        <p className="text-sm text-gray-700 mt-0.5">
           Review and validate CSR submissions through AI extraction → DRM approval → Gap analysis → Initiative matching
         </p>
       </div>
 
-      <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-5 text-xs text-gray-600">
+      <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 mb-5 text-xs text-gray-800">
         <strong>How this works:</strong> When a Donor or NGO submits a form or document, the Extraction
         Agent reads it and pulls out sector, geography, budget and KPIs. The DRM (you) reviews the
         confidence scores and clicks <strong>Validate</strong>. The Gap Diagnoser then runs, followed by
@@ -101,7 +101,7 @@ export default function RequirementsPage() {
         <button onClick={() => setFilter('all')}
           className={`rounded-xl border p-3 text-left transition-all ${filter === 'all' ? 'border-gray-400 bg-white shadow-sm' : 'border-gray-200 bg-white hover:bg-gray-50'}`}>
           <p className="text-2xl font-bold text-gray-900">{total}</p>
-          <p className="text-xs text-gray-500 mt-0.5">All Submissions</p>
+          <p className="text-xs text-gray-700 mt-0.5">All Submissions</p>
         </button>
         <button onClick={() => setFilter('running')}
           className={`rounded-xl border p-3 text-left transition-all ${filter === 'running' ? 'border-blue-400 bg-blue-50 shadow-sm' : 'border-gray-200 bg-white hover:bg-blue-50'}`}>
@@ -144,7 +144,7 @@ export default function RequirementsPage() {
              filter === 'done'   ? 'No completed submissions yet' :
              'No submissions yet'}
           </p>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-gray-700 mt-1">
             Go to Agent Jobs to submit a donor requirement or NGO initiative
           </p>
         </div>
@@ -153,15 +153,15 @@ export default function RequirementsPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-gray-200 bg-gray-50">
               <tr>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Submitted By</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Sector</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Geography</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Budget</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Pipeline Status</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">DRM Action</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Submitted</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-700 uppercase">Submitted By</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-700 uppercase">Type</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-700 uppercase">Sector</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-700 uppercase">Geography</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-700 uppercase">Budget</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-700 uppercase">Pipeline Status</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-700 uppercase">DRM Action</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-700 uppercase">Submitted</th>
+                <th className="text-left px-4 py-3 text-xs font-medium text-gray-700 uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -177,7 +177,7 @@ export default function RequirementsPage() {
                     <td className="px-4 py-3">
                       <p className="font-semibold text-gray-900">{fields?.companyName || req.donor?.orgName || 'Unknown'}</p>
                       {req.rawDocumentUrl && (
-                        <p className="text-[10px] text-gray-400 mt-0.5 font-mono">
+                        <p className="text-[10px] text-gray-600 mt-0.5 font-mono">
                           📄 {req.rawDocumentUrl.replace('uploaded:', '')}
                         </p>
                       )}
@@ -200,7 +200,7 @@ export default function RequirementsPage() {
                         <span className="text-xs text-gray-400 italic">Pending</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-600">
+                    <td className="px-4 py-3 text-xs text-gray-700">
                       {fields?.geography?.state
                         ? `${fields.geography.state}${fields.geography.districts?.length ? `, ${fields.geography.districts[0]}` : ''}`
                         : '—'}
@@ -244,7 +244,7 @@ export default function RequirementsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-400">
+                    <td className="px-4 py-3 text-xs text-gray-700">
                       {format(new Date(req.createdAt), 'dd MMM yyyy')}
                     </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>

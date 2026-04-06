@@ -55,7 +55,7 @@ export default function MyInquiriesPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">My Inquiries</h1>
-          <p className="text-sm text-slate-500 mt-1">Track your information requests and NGO responses.</p>
+          <p className="text-sm text-slate-700 mt-1">Track your information requests and NGO responses.</p>
         </div>
         <div className="bg-emerald-600 px-4 py-2 rounded-2xl shadow-lg shadow-emerald-600/20 text-white flex items-center gap-2">
           <MessageSquare className="w-4 h-4" />
@@ -69,7 +69,7 @@ export default function MyInquiriesPage() {
             <MessageSquare className="w-10 h-10 text-slate-200" />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">No inquiries yet</h2>
-          <p className="text-slate-500 mb-8 max-w-sm mx-auto text-sm">
+          <p className="text-slate-700 mb-8 max-w-sm mx-auto text-sm">
             Questions you ask via the "Need more information" button on initiative pages will appear here.
           </p>
           <Link 
@@ -94,7 +94,7 @@ export default function MyInquiriesPage() {
                       <h3 className="font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
                         {iq.afterState?.initiativeTitle || 'Initiative Inquiry'}
                       </h3>
-                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-slate-700 uppercase tracking-widest mt-0.5">
                         <Calendar className="w-3 h-3" />
                         {new Date(iq.timestamp).toLocaleDateString()}
                       </div>
@@ -124,7 +124,7 @@ export default function MyInquiriesPage() {
                 </div>
 
                 <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 mb-6">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Your Message</p>
+                  <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest mb-3">Your Message</p>
                   <p className="text-slate-700 text-sm leading-relaxed italic italic">
                     "{iq.afterState?.message}"
                   </p>
@@ -150,7 +150,7 @@ export default function MyInquiriesPage() {
                 <div className="flex justify-end">
                   <Link 
                     href={`/dashboard/initiatives/${iq.entityId}`}
-                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-emerald-600 transition-colors py-2 px-4 rounded-xl hover:bg-emerald-50"
+                    className="inline-flex items-center gap-2 text-xs font-bold text-slate-600 hover:text-emerald-600 transition-colors py-2 px-4 rounded-xl hover:bg-emerald-50"
                   >
                     View Project Details
                     <ChevronRight className="w-4 h-4" />

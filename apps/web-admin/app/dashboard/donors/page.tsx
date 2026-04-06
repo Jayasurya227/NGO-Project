@@ -38,7 +38,7 @@ export default function DonorsPage() {
 
   if (isLoading) return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="text-lg text-gray-500">Loading donors...</div>
+      <div className="text-lg text-gray-700">Loading donors...</div>
     </div>
   )
 
@@ -47,7 +47,7 @@ export default function DonorsPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Donors</h1>
-          <p className="text-gray-600">Manage all registered donors</p>
+          <p className="text-gray-800">Manage all registered donors</p>
         </div>
       </div>
 
@@ -61,7 +61,7 @@ export default function DonorsPage() {
         />
       </div>
 
-      <div className="mb-4 text-sm text-gray-600">
+      <div className="mb-4 text-sm text-gray-800">
         Showing {filtered.length} of {donors.length} donors
       </div>
 
@@ -69,23 +69,23 @@ export default function DonorsPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">Org Name</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[110px]">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">Created</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[100px]">Actions</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[200px]">Org Name</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[110px]">Type</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[130px]">Created</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[100px]">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-4 text-center text-gray-500">No donors found</td>
+                <td colSpan={4} className="px-6 py-4 text-center text-gray-700">No donors found</td>
               </tr>
             ) : (
               filtered.map(donor => (
                 <tr key={donor.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 text-sm font-medium text-gray-900">{donor.orgName ?? 'Individual'}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{donor.type}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
+                  <td className="px-6 py-4 text-sm text-gray-700">{donor.type}</td>
+                  <td className="px-6 py-4 text-sm text-gray-700">
                     {new Date(donor.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 text-sm font-medium">

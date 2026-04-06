@@ -15,7 +15,7 @@ const inp = (err?: string) =>
 const sel = () =>
   'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white';
 const lbl = (text: string, required = false) => (
-  <label className="block text-xs font-semibold text-slate-600 mb-1.5">
+  <label className="block text-xs font-semibold text-slate-800 mb-1.5">
     {text}{required && <span className="text-red-500 ml-0.5">*</span>}
   </label>
 );
@@ -153,7 +153,7 @@ export default function UploadRFPPage() {
             <CheckCircle2 className="w-8 h-8 text-emerald-600" />
           </div>
           <h2 className="text-xl font-bold text-slate-900 mb-2">Submission Successful</h2>
-          <p className="text-slate-500 text-sm mb-6">
+          <p className="text-slate-700 text-sm mb-6">
             Our AI is now analyzing your RFP. You'll see the pitch deck on your Impact Overview once the DRM reviews and approves it.
           </p>
           <button onClick={reset} className="px-6 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-bold hover:bg-emerald-700 transition-colors">
@@ -168,19 +168,19 @@ export default function UploadRFPPage() {
     <div className="p-8 max-w-2xl mx-auto">
       <header className="mb-6">
         <h1 className="text-2xl font-bold text-slate-900">Submit RFP</h1>
-        <p className="text-slate-500 text-sm mt-1">Submit your Request for Proposal for AI-driven matching and pitch deck generation.</p>
+        <p className="text-slate-700 text-sm mt-1">Submit your Request for Proposal for AI-driven matching and pitch deck generation.</p>
       </header>
 
       {/* Mode Toggle */}
       <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 shadow-sm">
-        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">How would you like to submit?</p>
+        <p className="text-xs font-semibold text-slate-700 uppercase tracking-wide mb-3">How would you like to submit?</p>
         <div className="grid grid-cols-2 gap-3">
           <button type="button" onClick={() => setMode('manual')}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all ${mode === 'manual' ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 hover:border-emerald-300'}`}>
             <span className="text-xl">✍️</span>
             <div>
               <p className={`text-sm font-bold ${mode === 'manual' ? 'text-emerald-700' : 'text-slate-700'}`}>Fill Form Manually</p>
-              <p className="text-xs text-slate-500 mt-0.5">Enter all fields in the form below</p>
+              <p className="text-xs text-slate-700 mt-0.5">Enter all fields in the form below</p>
             </div>
           </button>
           <button type="button" onClick={() => setMode('upload')}
@@ -188,7 +188,7 @@ export default function UploadRFPPage() {
             <span className="text-xl">📁</span>
             <div>
               <p className={`text-sm font-bold ${mode === 'upload' ? 'text-emerald-700' : 'text-slate-700'}`}>Upload Document</p>
-              <p className="text-xs text-slate-500 mt-0.5">AI extracts all fields automatically</p>
+              <p className="text-xs text-slate-700 mt-0.5">AI extracts all fields automatically</p>
             </div>
           </button>
         </div>
@@ -200,20 +200,20 @@ export default function UploadRFPPage() {
         {mode === 'upload' && (
           <div className={`bg-white rounded-2xl border-2 p-6 shadow-sm ${file ? 'border-emerald-400' : 'border-dashed border-slate-300'}`}>
             <h3 className="text-sm font-bold text-slate-900 mb-1">Upload RFP Document</h3>
-            <p className="text-xs text-slate-500 mb-4">AI will extract sector, geography, budget and KPIs automatically.</p>
+            <p className="text-xs text-slate-700 mb-4">AI will extract sector, geography, budget and KPIs automatically.</p>
             <div onClick={() => fileRef.current?.click()}
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${file ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'}`}>
               {file ? (
                 <div>
                   <p className="text-3xl mb-2">📄</p>
                   <p className="text-sm font-bold text-emerald-700">{file.name}</p>
-                  <p className="text-xs text-slate-500 mt-1">{(file.size / 1024).toFixed(0)} KB — ready to submit</p>
+                  <p className="text-xs text-slate-700 mt-1">{(file.size / 1024).toFixed(0)} KB — ready to submit</p>
                 </div>
               ) : (
                 <div>
                   <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                   <p className="text-sm font-medium text-slate-700">Click to browse or drag and drop</p>
-                  <p className="text-xs text-slate-400 mt-1">PDF, DOCX, images, Excel, or any document — Max 50 MB</p>
+                  <p className="text-xs text-slate-600 mt-1">PDF, DOCX, images, Excel, or any document — Max 50 MB</p>
                 </div>
               )}
               <input ref={fileRef} type="file" accept="*" className="hidden"

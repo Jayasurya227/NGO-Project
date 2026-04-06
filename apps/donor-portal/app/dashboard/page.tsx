@@ -97,7 +97,7 @@ export default function DonorDashboardPage() {
       <div className="mb-8 flex justify-between items-end">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Impact Overview</h1>
-          <p className="text-slate-500 text-sm">Welcome back! Here is the latest progress from your funded initiatives.</p>
+          <p className="text-slate-700 text-sm">Welcome back! Here is the latest progress from your funded initiatives.</p>
         </div>
         <Link href="/dashboard/upload" className="bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-emerald-700 transition-colors shadow-sm">
           Submit New RFP
@@ -110,7 +110,7 @@ export default function DonorDashboardPage() {
             <div className={`${stat.bg} w-10 h-10 rounded-xl flex items-center justify-center mb-4`}>
               <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
-            <p className="text-sm font-medium text-slate-500 mb-1">{stat.label}</p>
+            <p className="text-sm font-medium text-slate-700 mb-1">{stat.label}</p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-slate-900">{stat.value}</span>
             </div>
@@ -124,11 +124,11 @@ export default function DonorDashboardPage() {
           <section>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-900">Your Submissions</h2>
-              <span className="text-slate-400 text-xs font-medium">{requirements.length} Total</span>
+              <span className="text-slate-700 text-xs font-medium">{requirements.length} Total</span>
             </div>
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
               {requirements.length === 0 ? (
-                <div className="p-8 text-center text-slate-400 italic text-sm">
+                <div className="p-8 text-center text-slate-700 italic text-sm">
                   No RFPs uploaded yet. Submit your first one to start matching.
                 </div>
               ) : (
@@ -163,8 +163,8 @@ export default function DonorDashboardPage() {
                                     {req.status === 'REJECTED' ? '❌ Rejected' : req.status.replace(/_/g, ' ')}
                                   </span>
                                 )}
-                                <span className="text-slate-300 text-xs">•</span>
-                                <span className="text-slate-400 text-[10px] flex items-center gap-1">
+                                <span className="text-slate-500 text-xs">•</span>
+                                <span className="text-slate-700 text-[10px] flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
                                   {new Date(req.createdAt).toLocaleDateString()}
                                 </span>
@@ -206,7 +206,7 @@ export default function DonorDashboardPage() {
             
             <div className="space-y-4">
               {stories.length === 0 ? (
-                <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-12 text-center text-slate-400">
+                <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-12 text-center text-slate-700">
                   <Heart className="w-8 h-8 mx-auto mb-3 opacity-20" />
                   <p className="text-sm">No stories available yet</p>
                 </div>
@@ -217,11 +217,11 @@ export default function DonorDashboardPage() {
                       <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full uppercase">
                         {story.initiative?.sector || 'IMPACT'}
                       </span>
-                      <span className="text-slate-300 text-xs">•</span>
-                      <span className="text-slate-400 text-xs">{new Date(story.createdAt).toLocaleDateString()}</span>
+                      <span className="text-slate-500 text-xs">•</span>
+                      <span className="text-slate-700 text-xs">{new Date(story.createdAt).toLocaleDateString()}</span>
                     </div>
                     <h3 className="font-bold text-slate-900 mb-2">{story.contentJson?.title}</h3>
-                    <p className="text-sm text-slate-500 line-clamp-2">{story.contentJson?.body}</p>
+                    <p className="text-sm text-slate-700 line-clamp-2">{story.contentJson?.body}</p>
                   </div>
                 ))
               )}
@@ -235,7 +235,7 @@ export default function DonorDashboardPage() {
             <div className="bg-white border border-slate-200 rounded-2xl p-6">
               <div className="mb-6">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-600 font-medium">Total Committed</span>
+                  <span className="text-slate-700 font-medium">Total Committed</span>
                   <span className="text-slate-900 font-bold">₹0.00</span>
                 </div>
                 <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -244,11 +244,11 @@ export default function DonorDashboardPage() {
               </div>
               <div className="space-y-4 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-500 font-medium">Requirement ID</span>
+                  <span className="text-slate-700 font-medium">Requirement ID</span>
                   <span className="text-slate-900 font-bold">REQ-PENDING</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500 font-medium">Last Allocation</span>
+                  <span className="text-slate-700 font-medium">Last Allocation</span>
                   <span className="text-slate-900 font-bold">N/A</span>
                 </div>
                 <button disabled className="w-full mt-2 py-2 bg-slate-100 text-slate-400 font-bold rounded-lg uppercase tracking-wider cursor-not-allowed">
@@ -262,11 +262,11 @@ export default function DonorDashboardPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold text-slate-900">Your Pitch Decks</h2>
-              <span className="text-slate-400 text-xs font-medium">{pitchDecks.length} Approved</span>
+              <span className="text-slate-700 text-xs font-medium">{pitchDecks.length} Approved</span>
             </div>
             <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
               {pitchDecks.length === 0 ? (
-                <div className="p-6 text-center text-slate-400 italic text-xs">
+                <div className="p-6 text-center text-slate-700 italic text-xs">
                   No pitch decks yet.
                 </div>
               ) : (
@@ -281,12 +281,12 @@ export default function DonorDashboardPage() {
                           </div>
                           <div className="min-w-0">
                             <p className="text-xs font-bold text-slate-900 truncate">{deck.initiativeTitle ?? 'Impact Partnership Proposal'}</p>
-                          {deck.ngoName && <p className="text-[10px] text-slate-500 truncate">{deck.ngoName}</p>}
+                          {deck.ngoName && <p className="text-[10px] text-slate-700 truncate">{deck.ngoName}</p>}
                             <p className="text-[10px] mt-0.5 flex items-center gap-1">
                               {isApproved ? (
                                 <>
                                   <CheckCircle2 className="w-3 h-3 text-emerald-500 flex-shrink-0" />
-                                  <span className="text-slate-400">Approved {deck.approvedAt ? new Date(deck.approvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span>
+                                  <span className="text-slate-600">Approved {deck.approvedAt ? new Date(deck.approvedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span>
                                 </>
                               ) : (
                                 <>

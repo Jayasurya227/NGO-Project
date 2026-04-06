@@ -80,18 +80,30 @@ Rules:
 - title: use "${fileName.replace(/\.[^.]+$/, "")}" if no clear title in the document.`;
 
   // Decide whether to send text or the raw file to Gemini
-  const isUsableText = documentText && documentText.length > 100 && !documentText.startsWith("%PDF");
+  const cleanText = documentText?.replace(/^\s*%PDF[^\n]*\n?/, "").trim() ?? "";
+  const isUsableText = cleanText.length > 100;
 
   let parts: any[];
   if (isUsableText) {
-    parts = [{ text: `${promptText}\n\n=== DOCUMENT ===\n${documentText.slice(0, 15000)}\n=== END ===` }];
+    // Text-based document — send extracted text + also send file inline so Gemini can see IDs on header/footer
+    const textPart = { text: `${promptText}\n\n=== DOCUMENT TEXT ===\n${cleanText.slice(0, 15000)}\n=== END ===` };
+    if (fileBuffer && (fileMimeType === "application/pdf" || fileMimeType.startsWith("image/"))) {
+      parts = [
+        { inlineData: { mimeType: fileMimeType, data: fileBuffer.toString("base64") } },
+        textPart,
+      ];
+    } else {
+      parts = [textPart];
+    }
   } else if (fileBuffer && fileMimeType) {
-    // Scanned / image-based PDF — use Gemini multimodal
+    // Scanned / image-based PDF — use Gemini multimodal only
+    console.log("[initiative-upload] Using multimodal mode for:", fileMimeType);
     parts = [
       { inlineData: { mimeType: fileMimeType, data: fileBuffer.toString("base64") } },
       { text: promptText },
     ];
   } else {
+    console.warn("[initiative-upload] No usable text or file buffer — skipping AI extraction");
     return null;
   }
 
@@ -104,11 +116,19 @@ Rules:
         generationConfig: { responseMimeType: "application/json" },
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[initiative-upload] Gemini API error:", res.status, errText.slice(0, 300));
+      return null;
+    }
     const data = await res.json() as any;
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    return JSON.parse(text.replace(/```json\n?|```/g, "").trim());
-  } catch {
+    console.log("[initiative-upload] Gemini raw response:", text.slice(0, 500));
+    const parsed = JSON.parse(text.replace(/```json\n?|```/g, "").trim());
+    console.log("[initiative-upload] Extracted ngoId:", parsed?.ngoId, "| title:", parsed?.title);
+    return parsed;
+  } catch (err) {
+    console.error("[initiative-upload] Extraction error:", err);
     return null;
   }
 }
@@ -176,16 +196,17 @@ export async function initiativesRoutes(app: FastifyInstance) {
       : [];
     const sdgTags = sanitizedSdgTags.length > 0 ? sanitizedSdgTags : ["QUALITY_EDUCATION"];
 
-    // Validate ngoId — reject garbage (sentences, very long strings, binary junk)
+    // Validate ngoId — reject garbage (long sentences, binary junk)
     const rawNgoId = extracted?.ngoId;
     const ngoId = (
       rawNgoId &&
       typeof rawNgoId === "string" &&
-      rawNgoId.trim().length > 0 &&
-      rawNgoId.trim().length <= 60 &&          // IDs are short
-      !/\s{2,}/.test(rawNgoId) &&              // no multiple spaces (sentence garbage)
-      rawNgoId.trim().split(" ").length <= 6   // max 6 words
+      rawNgoId.trim().length >= 3 &&
+      rawNgoId.trim().length <= 80 &&           // IDs can be up to 80 chars
+      !/[<>{}\[\]]/.test(rawNgoId) &&           // no HTML/code chars
+      rawNgoId.trim().split(/\s+/).length <= 8  // max 8 words
     ) ? rawNgoId.trim() : null;
+    console.log("[initiative-upload] Final ngoId saved:", ngoId, "(raw:", rawNgoId, ")");
 
     const initiative = await prisma.initiative.create({
       data: {

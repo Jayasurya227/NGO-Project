@@ -502,6 +502,32 @@ export async function requirementsRoutes(app: FastifyInstance) {
     });
   });
 
+  // POST /:id/request-resubmission
+  app.post("/:id/request-resubmission", { preHandler: requirePermission("requirement:update") }, async (req, reply) => {
+    const tenantId = (req as any).tenantId;
+    const { id } = req.params as { id: string };
+    const { note } = (req.body as any) ?? {};
+
+    const existing = await prisma.sponsorRequirement.findFirst({ where: { id, tenantId } });
+    if (!existing) return reply.status(404).send({ success: false, error: { code: "NOT_FOUND", message: "Requirement not found" } });
+
+    const mergedFields = {
+      ...((existing.extractedFields as any) ?? {}),
+      resubmissionRequested: true,
+      resubmissionNote: note ?? "",
+    };
+
+    await prisma.sponsorRequirement.update({
+      where: { id },
+      data: {
+        status: "NEEDS_REVIEW" as any,
+        extractedFields: mergedFields,
+      },
+    });
+
+    return reply.send({ success: true });
+  });
+
   // DELETE /:id
   app.delete("/:id", { preHandler: requirePermission("requirement:create") }, async (req, reply) => {
     const tenantId = (req as any).tenantId;

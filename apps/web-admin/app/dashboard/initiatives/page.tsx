@@ -50,7 +50,7 @@ function FileUploadBox({ file, setFile }: { file: File | null; setFile: (f: File
       <div className="flex items-start justify-between mb-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Upload NGO Initiative Document</h3>
-          <p className="text-xs text-gray-500 mt-0.5">AI will extract all details automatically</p>
+          <p className="text-xs text-gray-700 mt-0.5">AI will extract all details automatically</p>
         </div>
         {file && <button type="button" onClick={() => setFile(null)} className="text-xs text-red-500 hover:text-red-700 ml-4">Remove ✕</button>}
       </div>
@@ -60,13 +60,13 @@ function FileUploadBox({ file, setFile }: { file: File | null; setFile: (f: File
           <div>
             <p className="text-3xl mb-2">📄</p>
             <p className="text-sm font-semibold text-green-700">{file.name}</p>
-            <p className="text-xs text-gray-500 mt-1">{(file.size / 1024).toFixed(0)} KB — ready to submit</p>
+            <p className="text-xs text-gray-700 mt-1">{(file.size / 1024).toFixed(0)} KB — ready to submit</p>
           </div>
         ) : (
           <div>
             <p className="text-3xl mb-2">📁</p>
             <p className="text-sm font-medium text-gray-700">Click to browse or drag and drop</p>
-            <p className="text-xs text-gray-400 mt-1">PDF, DOCX, images, Excel, or any document — Max 50 MB</p>
+            <p className="text-xs text-gray-600 mt-1">PDF, DOCX, images, Excel, or any document — Max 50 MB</p>
           </div>
         )}
         <input ref={ref} type="file" accept="*" className="hidden"
@@ -174,22 +174,22 @@ function CreateInitiativeModal({ onClose, onSuccess }: { onClose: () => void; on
         <div className="sticky top-0 bg-white rounded-t-2xl border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
           <div>
             <h2 className="text-lg font-bold text-gray-900">Create NGO Initiative</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Fill the form manually or upload a document</p>
+            <p className="text-xs text-gray-700 mt-0.5">Fill the form manually or upload a document</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-xl font-bold">✕</button>
+          <button onClick={onClose} className="text-gray-600 hover:text-gray-900 text-xl font-bold">✕</button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Mode Toggle */}
           <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">How would you like to submit?</p>
+            <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">How would you like to submit?</p>
             <div className="grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setMode('manual')}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl border-2 text-left transition-all ${mode === 'manual' ? 'border-green-500 bg-green-50' : 'border-gray-200 hover:border-green-300'}`}>
                 <span className="text-xl">✍️</span>
                 <div>
                   <p className={`text-sm font-semibold ${mode === 'manual' ? 'text-green-700' : 'text-gray-700'}`}>Fill Form Manually</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Enter all fields in the form below</p>
+                  <p className="text-xs text-gray-700 mt-0.5">Enter all fields in the form below</p>
                 </div>
               </button>
               <button type="button" onClick={() => setMode('upload')}
@@ -197,7 +197,7 @@ function CreateInitiativeModal({ onClose, onSuccess }: { onClose: () => void; on
                 <span className="text-xl">📁</span>
                 <div>
                   <p className={`text-sm font-semibold ${mode === 'upload' ? 'text-green-700' : 'text-gray-700'}`}>Upload Document</p>
-                  <p className="text-xs text-gray-500 mt-0.5">AI extracts all fields automatically</p>
+                  <p className="text-xs text-gray-700 mt-0.5">AI extracts all fields automatically</p>
                 </div>
               </button>
             </div>
@@ -422,28 +422,28 @@ export default function InitiativesPage() {
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[130px]">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[130px]">
                 NGO ID
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[200px]">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[200px]">
                 Title
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[110px]">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[110px]">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[140px]">
                 Sector
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[140px]">
                 Beneficiaries
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[140px]">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[140px]">
                 Budget Required
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[110px]">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[110px]">
                 Start Date
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[160px]">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[160px]">
                 Actions
               </th>
             </tr>
@@ -451,7 +451,7 @@ export default function InitiativesPage() {
           <tbody className="bg-white divide-y divide-gray-200">
             {filteredInitiatives.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-4 text-center text-gray-500">
+                <td colSpan={8} className="px-6 py-4 text-center text-gray-700">
                   No initiatives found
                 </td>
               </tr>
@@ -479,17 +479,23 @@ export default function InitiativesPage() {
                           className="text-[10px] text-white bg-blue-600 hover:bg-blue-700 px-1.5 py-0.5 rounded disabled:opacity-50">
                           {savingNgoId === initiative.id ? '...' : 'Save'}
                         </button>
-                        <button onClick={() => setEditingNgoId(null)} className="text-[10px] text-gray-500 hover:text-gray-800">✕</button>
+                        <button onClick={() => setEditingNgoId(null)} className="text-[10px] text-gray-700 hover:text-gray-900">✕</button>
                       </div>
                     ) : (
                       <span
-                        title="Click to edit NGO ID"
+                        title="Click to set NGO ID"
                         onClick={() => { setEditingNgoId(initiative.id); setNgoIdDraft(initiative.ngoId ?? '') }}
                         className="cursor-pointer group flex items-center gap-1">
-                        <span className={initiative.ngoId ? 'text-gray-700' : 'text-gray-400'}>
-                          {initiative.ngoId ?? '—'}
-                        </span>
-                        <span className="text-[10px] text-gray-300 group-hover:text-blue-400">✎</span>
+                        {initiative.ngoId ? (
+                          <>
+                            <span className="text-gray-700">{initiative.ngoId}</span>
+                            <span className="text-[10px] text-gray-500 group-hover:text-blue-400">✎</span>
+                          </>
+                        ) : (
+                          <span className="text-[11px] text-blue-400 group-hover:text-blue-600 border border-dashed border-blue-200 group-hover:border-blue-400 px-1.5 py-0.5 rounded transition-colors">
+                            + Add ID
+                          </span>
+                        )}
                       </span>
                     )}
                   </td>
@@ -497,7 +503,7 @@ export default function InitiativesPage() {
                     <div className="text-sm font-medium text-gray-900">
                       {initiative.title}
                     </div>
-                    <div className="text-sm text-gray-500 truncate max-w-[240px]">
+                    <div className="text-sm text-gray-700 truncate max-w-[240px]">
                       {initiative.description}
                     </div>
                   </td>
@@ -519,7 +525,7 @@ export default function InitiativesPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     ₹{initiative.budgetRequired?.toLocaleString() || '0'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                     {initiative.startDate ? new Date(initiative.startDate).toLocaleDateString() : 'TBD'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

@@ -166,7 +166,7 @@ export default function RequirementDetailPage() {
   // Returns red border style when AI confidence is low for a score key
   const lowConf = (key: string) => (scores?.[key] ?? 0) < 0.75
   const inputCls = (key: string) =>
-    `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 ${
+    `w-full border rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 ${
       lowConf(key)
         ? 'border-red-300 bg-red-50 focus:ring-red-400'
         : 'border-gray-200 focus:ring-blue-500'
@@ -545,7 +545,7 @@ export default function RequirementDetailPage() {
           {showResubmitForm && (
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 space-y-3">
               <p className="text-sm font-semibold text-orange-800">Request Resubmission from Donor</p>
-              <p className="text-xs text-orange-700">
+              <p className="text-xs text-orange-900">
                 This will notify the donor that their document needs to be resubmitted. The requirement status will reset to Pending Extraction.
               </p>
               <textarea
@@ -553,12 +553,12 @@ export default function RequirementDetailPage() {
                 onChange={e => setResubmitNote(e.target.value)}
                 placeholder="Optional: explain what needs to be corrected or clarified in the resubmission..."
                 rows={3}
-                className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+                className="w-full border border-orange-200 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
               />
               <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => setShowResubmitForm(false)}
-                  className="text-sm text-gray-500 hover:text-gray-700 px-4 py-2 rounded-lg border border-gray-200 bg-white"
+                  className="text-sm text-gray-700 hover:text-gray-900 px-4 py-2 rounded-lg border border-gray-200 bg-white"
                 >
                   Cancel
                 </button>
