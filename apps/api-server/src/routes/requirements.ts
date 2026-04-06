@@ -50,10 +50,6 @@ function getMimeType(fileName: string): string {
   return "application/octet-stream";
 }
 
-function isImageMime(mime: string): boolean {
-  return mime.startsWith("image/");
-}
-
 function isGeminiNativeMime(mime: string): boolean {
   // Mime types Gemini can read directly as inline data
   return mime === "application/pdf" || mime.startsWith("image/");
@@ -172,8 +168,10 @@ export async function requirementsRoutes(app: FastifyInstance) {
       DEFAULT_JOB_OPTIONS
     );
 
-    await prisma.agentJobLog.create({
-      data: { tenantId, jobId: job.id!, agentName: "extract", status: "QUEUED" },
+    await prisma.agentJobLog.upsert({
+      where: { jobId: job.id! },
+      update: { status: "QUEUED" },
+      create: { tenantId: tenantId as string, jobId: job.id!, agentName: "extract", status: "QUEUED", modelVersion: "gemini-2.5-flash-lite", promptHash: "n/a" },
     });
 
     return reply.status(202).send({
@@ -225,7 +223,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
     await prisma.agentJobLog.upsert({
       where: { jobId: job.id! },
       update: { status: "QUEUED" },
-      create: { tenantId, jobId: job.id!, agentName: "extract", status: "QUEUED" },
+      create: { tenantId: tenantId as string, jobId: job.id!, agentName: "extract", status: "QUEUED", modelVersion: "gemini-2.5-flash-lite", promptHash: "n/a" },
     });
 
     return reply.status(202).send({
@@ -369,7 +367,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
 
     await prisma.sponsorRequirement.update({
       where: { id },
-      data: { status: "VALIDATED", extractedFields: mergedFields },
+      data: { status: "VALIDATED", extractedFields: mergedFields as any },
     });
 
     // Directly queue gap analysis so it starts immediately (not via polling recovery)
@@ -382,7 +380,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
     await prisma.agentJobLog.upsert({
       where: { jobId: gapJob.id! },
       update: { status: "QUEUED" },
-      create: { tenantId, jobId: gapJob.id!, agentName: "gap-diagnoser", status: "QUEUED" },
+      create: { tenantId: tenantId as string, jobId: gapJob.id!, agentName: "gap-diagnoser", status: "QUEUED", modelVersion: "gemini-2.5-flash-lite", promptHash: "n/a" },
     });
 
     return reply.send({ success: true });
@@ -485,7 +483,7 @@ export async function requirementsRoutes(app: FastifyInstance) {
     await prisma.agentJobLog.upsert({
       where: { jobId: job.id! },
       update: { status: "QUEUED" },
-      create: { tenantId, jobId: job.id!, agentName: "pitch-deck-agent", status: "QUEUED" },
+      create: { tenantId: tenantId as string, jobId: job.id!, agentName: "pitch-deck-agent", status: "QUEUED", modelVersion: "gemini-2.5-flash-lite", promptHash: "n/a" },
     });
 
     await auditLog({
