@@ -35,8 +35,12 @@ import { donationsRoutes } from "./routes/donations";
 import { websocketPlugin } from "./ws/plugin";
 async function start() {
   const app = Fastify({ logger: false, ignoreTrailingSlash: true });
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+    : ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"];
+
   await app.register(cors, {
-    origin: ["http://localhost:3000", "http://localhost:3001", "http://localhost:3002"],
+    origin: allowedOrigins,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   });
