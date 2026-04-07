@@ -40,5 +40,10 @@
     "turbo": "latest",
     "typescript": "^5.3.0",
     "vitest": "^4.1.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "ioredis": "5.10.0"
+    }
   }
 }
