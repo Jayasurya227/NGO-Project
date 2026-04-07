@@ -2,12 +2,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { Heart, Calendar, Share2 } from 'lucide-react';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
 export default function DonorStoriesPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['stories'],
     queryFn: async () => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch('http://localhost:4000/api/stories', {
+      const res = await fetch(`${API_URL}/api/stories`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       return res.json();

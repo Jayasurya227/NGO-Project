@@ -4,6 +4,8 @@ import { TrendingUp, Users, CheckCircle2, Heart, FileText, Clock, ChevronRight, 
 import Link from 'next/link';
 import { useState } from 'react';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
 export default function DonorDashboardPage() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
@@ -12,7 +14,7 @@ export default function DonorDashboardPage() {
     try {
       const token = localStorage.getItem('donorAccessToken');
       // Find initiative matched to this requirement and download its pitch deck
-      const res = await fetch(`http://localhost:4000/api/requirements/${requirementId}/pitch-deck-file`, {
+      const res = await fetch(`${API_URL}/api/requirements/${requirementId}/pitch-deck-file`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Download failed');
@@ -34,7 +36,7 @@ export default function DonorDashboardPage() {
     queryKey: ['pitch-decks'],
     queryFn: async () => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch('http://localhost:4000/api/requirements/pitch-decks', {
+      const res = await fetch(`${API_URL}/api/requirements/pitch-decks`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       return res.json();
@@ -45,7 +47,7 @@ export default function DonorDashboardPage() {
     queryKey: ['stories-preview'],
     queryFn: async () => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch('http://localhost:4000/api/stories?limit=2', {
+      const res = await fetch(`${API_URL}/api/stories?limit=2`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       return res.json();
@@ -56,7 +58,7 @@ export default function DonorDashboardPage() {
     queryKey: ['requirements-preview'],
     queryFn: async () => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch('http://localhost:4000/api/requirements', {
+      const res = await fetch(`${API_URL}/api/requirements`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       return res.json();
@@ -67,7 +69,7 @@ export default function DonorDashboardPage() {
     queryKey: ['initiatives-stats'],
     queryFn: async () => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch('http://localhost:4000/api/initiatives?limit=100', {
+      const res = await fetch(`${API_URL}/api/initiatives?limit=100`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       return res.json();

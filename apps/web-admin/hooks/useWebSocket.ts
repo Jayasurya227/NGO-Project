@@ -15,7 +15,10 @@ export function useWebSocket(onEvent: (data: any) => void) {
     const session = getSession()
     if (!session) return
 
-    const ws = new WebSocket('ws://localhost:4000/ws/notifications')
+    const wsBase = process.env.NEXT_PUBLIC_WS_URL
+      ?? (process.env.NEXT_PUBLIC_API_URL?.replace(/^http/, 'ws'))
+      ?? 'ws://localhost:4000'
+    const ws = new WebSocket(`${wsBase}/ws/notifications`)
     wsRef.current = ws
 
     ws.onopen = () => {

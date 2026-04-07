@@ -4,12 +4,14 @@ import { MessageSquare, Calendar, ArrowRight, Clock, CheckCircle2, ChevronRight,
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
 export default function MyInquiriesPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['my-inquiries'],
     queryFn: async () => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch('http://localhost:4000/api/donors/my-inquiries', {
+      const res = await fetch(`${API_URL}/api/donors/my-inquiries`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to fetch');
@@ -21,7 +23,7 @@ export default function MyInquiriesPage() {
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch(`http://localhost:4000/api/donors/inquiries/${id}`, {
+      const res = await fetch(`${API_URL}/api/donors/inquiries/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

@@ -32,6 +32,8 @@ function Section({ num, title, children }: { num: number; title: string; childre
   );
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
 export default function UploadRFPPage() {
   const [mode, setMode]     = useState<Mode>('upload');
   const [file, setFile]     = useState<File | null>(null);
@@ -87,7 +89,7 @@ export default function UploadRFPPage() {
         const formData = new FormData();
         formData.append('file', file!);
         if (donorId) formData.append('donorId', donorId);
-        const res = await fetch('http://localhost:4000/api/requirements/upload', {
+        const res = await fetch(`${API_URL}/api/requirements/upload`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}` },
           body: formData,
@@ -117,7 +119,7 @@ export default function UploadRFPPage() {
           form.additionalNotes     ? `Notes: ${form.additionalNotes}` : '',
         ].filter(Boolean).join(' | ');
 
-        const res = await fetch('http://localhost:4000/api/requirements', {
+        const res = await fetch(`${API_URL}/api/requirements`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ donorId, notes }),

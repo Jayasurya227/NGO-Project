@@ -28,6 +28,8 @@ const SECTOR_MAP: Record<string, string> = {
   'CHILD_WELFARE': 'Child Welfare'
 };
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
 export default function DonorInitiativesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sectorFilter, setSectorFilter] = useState('ALL');
@@ -36,7 +38,7 @@ export default function DonorInitiativesPage() {
     queryKey: ['donor-initiatives'],
     queryFn: async () => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch('http://localhost:4000/api/initiatives?limit=100', {
+      const res = await fetch(`${API_URL}/api/initiatives?limit=100`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to fetch');

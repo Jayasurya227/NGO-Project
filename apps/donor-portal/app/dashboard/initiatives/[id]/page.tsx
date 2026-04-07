@@ -50,6 +50,8 @@ const SDG_MAP: Record<string, string> = {
   'SDG10': 'SDG 10: Reduced Inequality'
 };
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
 export default function DonorInitiativeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -67,7 +69,7 @@ export default function DonorInitiativeDetailPage() {
     queryKey: ['donor-initiative', id],
     queryFn: async () => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch(`http://localhost:4000/api/initiatives/${id}`, {
+      const res = await fetch(`${API_URL}/api/initiatives/${id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) throw new Error('Failed to fetch');
@@ -79,7 +81,7 @@ export default function DonorInitiativeDetailPage() {
     queryKey: ['donor-inquiries', id],
     queryFn: async () => {
       const token = localStorage.getItem('donorAccessToken');
-      const res = await fetch(`http://localhost:4000/api/initiatives/${id}/inquiries`, {
+      const res = await fetch(`${API_URL}/api/initiatives/${id}/inquiries`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!res.ok) return { data: [] };
@@ -109,7 +111,7 @@ export default function DonorInitiativeDetailPage() {
         formData.append('donorId', donorId);
       }
       
-      const res = await fetch('http://localhost:4000/api/requirements/upload', {
+      const res = await fetch(`${API_URL}/api/requirements/upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -398,7 +400,7 @@ export default function DonorInitiativeDetailPage() {
                     setInfoError(null);
                     try {
                       const token = localStorage.getItem('donorAccessToken');
-                      const res = await fetch(`http://localhost:4000/api/initiatives/${id}/inquiry`, {
+                      const res = await fetch(`${API_URL}/api/initiatives/${id}/inquiry`, {
                         method: 'POST',
                         headers: {
                           'Authorization': `Bearer ${token}`,
