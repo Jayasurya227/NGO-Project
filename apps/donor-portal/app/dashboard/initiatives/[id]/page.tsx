@@ -329,7 +329,7 @@ export default function DonorInitiativeDetailPage() {
               </p>
               <div className="flex flex-col gap-3">
                 <button
-                  onClick={() => setShowUploadModal(true)}
+                  onClick={() => router.push('/dashboard/upload')}
                   className="w-full py-3 bg-white text-emerald-600 font-bold rounded-xl text-sm flex items-center justify-center gap-2 border border-emerald-100 ring-4 ring-emerald-50/50"
                 >
                   Upload RFP for Analysis

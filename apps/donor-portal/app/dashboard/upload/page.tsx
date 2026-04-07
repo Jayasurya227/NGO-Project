@@ -11,9 +11,9 @@ const posNum = (v: string, l: string) => (isNaN(Number(v)) || Number(v) <= 0) ? 
 const Err = ({ msg }: { msg?: string }) => msg ? <p className="text-red-500 text-xs mt-1">{msg}</p> : null;
 
 const inp = (err?: string) =>
-  `w-full border rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none ${err ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'}`;
+  `w-full border rounded-xl px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:outline-none ${err ? 'border-red-400 bg-red-50' : 'border-slate-200 bg-white'}`;
 const sel = () =>
-  'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white';
+  'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-gray-900 focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white';
 const lbl = (text: string, required = false) => (
   <label className="block text-xs font-semibold text-slate-800 mb-1.5">
     {text}{required && <span className="text-red-500 ml-0.5">*</span>}
