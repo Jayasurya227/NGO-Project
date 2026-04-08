@@ -1,0 +1,15 @@
+(node:1716) [FSTDEP022] FastifyWarning: The router options for ignoreTrailingSlash property access is deprecated. Please use "options.routerOptions" instead for accessing router options. The router options will be removed in `fastify@6`.
+(Use `node --trace-warnings ...` to show where the warning was created)
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
+IMPORTANT! Eviction policy is volatile-lru. It should be "noeviction"
