@@ -12,6 +12,8 @@
       "@ngo/auth": ["../auth/src/index.ts"],
       "@ngo/auth/encryption": ["../auth/src/encryption.ts"],
       "@ngo/agents/utils/embeddings": ["../agents/src/utils/embeddings.ts"],
+      "@ngo/agents/matching": ["../agents/src/matching/index.ts"],
+      "@ngo/agents/pitch-deck/index": ["../agents/src/pitch-deck/index.ts"],
       "@ngo/types": ["../types/src/index.ts"]
     }
   },
