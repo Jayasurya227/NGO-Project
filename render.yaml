@@ -1,0 +1,107 @@
+services:
+  # ── API SERVER ────────────────────────────────────────────────────────────────
+  - type: web
+    name: ngo-api-server
+    env: node
+    buildCommand: npm install -g pnpm && pnpm install && cd packages/database && pnpm exec prisma generate && cd ../.. && npx turbo run build --filter=@ngo/api-server
+    startCommand: cd apps/api-server && pnpm start
+    healthCheckPath: /health
+    envVars:
+      - key: API_PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: ENCRYPTION_KEY_HEX
+        sync: false
+      - key: GCP_PROJECT
+        value: inspire-education-489506
+      - key: GCP_LOCATION
+        value: us-central1
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash-lite
+      - key: GOOGLE_EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: EMBEDDING_DIMENSIONS
+        value: "3072"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: MOCK_AI
+        value: "false"
+      - key: ALLOWED_ORIGINS
+        sync: false
+
+  # ── QUEUE WORKERS ─────────────────────────────────────────────────────────────
+  - type: worker
+    name: ngo-queue-workers
+    env: node
+    buildCommand: npm install -g pnpm && pnpm install
+    startCommand: pnpm workers
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY_HEX
+        sync: false
+      - key: GCP_PROJECT
+        value: inspire-education-489506
+      - key: GCP_LOCATION
+        value: us-central1
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash-lite
+      - key: GOOGLE_EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: EMBEDDING_DIMENSIONS
+        value: "3072"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: MOCK_AI
+        value: "false"
+
+  # ── DONOR PORTAL ──────────────────────────────────────────────────────────────
+  - type: web
+    name: ngo-donor-portal
+    env: node
+    buildCommand: npm install -g pnpm && pnpm install && npx turbo run build --filter=donor-portal
+    startCommand: cd apps/donor-portal && pnpm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_WS_URL
+        sync: false
+
+  # ── WEB ADMIN ─────────────────────────────────────────────────────────────────
+  - type: web
+    name: ngo-web-admin
+    env: node
+    buildCommand: npm install -g pnpm && pnpm install && npx turbo run build --filter=web-admin
+    startCommand: cd apps/web-admin && pnpm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_WS_URL
+        sync: false
