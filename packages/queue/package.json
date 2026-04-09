@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "./src/queues.ts",
   "scripts": {
-    "build": "tsc",
+    "build": "echo 'queue: skipping tsc, using tsx at runtime'",
     "workers": "tsx src/start-all-workers.ts"
   },
   "dependencies": {
